@@ -1,0 +1,200 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Minh OS specific
+data/market_data.db
+logs/*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Sensitive configuration files
+.env
+.env.local
+.env.production
+config.local.py
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Compiled TA-Lib files
+ta-lib/src/*.o
+ta-lib/src/*.lo
+ta-lib/src/*.la
+ta-lib/src/ta_abstract/*.o
+ta-lib/src/ta_abstract/*.lo
+ta-lib/src/ta_abstract/.libs/
+ta-lib/src/ta_abstract/.deps/
+ta-lib/src/ta_common/*.o
+ta-lib/src/ta_common/*.lo
+ta-lib/src/ta_common/.libs/
+ta-lib/src/ta_common/.deps/
+ta-lib/src/ta_func/*.o
+ta-lib/src/ta_func/*.lo
+ta-lib/src/ta_func/.libs/
+ta-lib/src/ta_func/.deps/
+ta-lib/src/tools/*.o
+ta-lib/src/tools/*.lo
+ta-lib/src/tools/.libs/
+ta-lib/src/tools/.deps/
+ta-lib/src/tools/gen_code/*.o
+ta-lib/src/tools/gen_code/gen_code
+ta-lib/src/tools/gen_code/mcpp.exe
+ta-lib/src/tools/ta_regtest/*.o
+ta-lib/src/tools/ta_regtest/ta_regtest
+ta-lib/src/tools/ta_regtest/.libs/
+ta-lib/src/tools/ta_regtest/.deps/
+ta-lib/src/.libs/
+ta-lib/autom4te.cache/
+ta-lib/bin/
+ta-lib/config.status
+ta-lib/config.log
+
+# ML model files (if large)
+ml_models/*.pkl
+ml_models/*.joblib
+ml_models/*.h5
+ml_models/*.model
+
+# Docker volumes
+docker-volumes/ 
