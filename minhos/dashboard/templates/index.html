@@ -265,6 +265,166 @@
             background: #4caf50;
             color: #fff;
         }
+        
+        /* AI Transparency Styles */
+        .analysis-item, .indicator-item, .risk-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: rgba(79, 189, 186, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #4fbdba;
+        }
+        
+        .indicator-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            padding: 5px;
+            background: rgba(126, 200, 227, 0.1);
+            border-radius: 3px;
+        }
+        
+        .breakdown-section {
+            margin-bottom: 15px;
+        }
+        
+        .breakdown-section h4 {
+            color: #7ec8e3;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #0f3460;
+            padding-bottom: 5px;
+        }
+        
+        .ai-transparency-section {
+            border: 2px solid #4fbdba;
+            border-radius: 10px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(22, 33, 62, 0.8) 100%);
+        }
+        
+        /* Decision Quality Styles */
+        .decision-quality-section {
+            border: 2px solid #ff9800;
+            border-radius: 10px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(46, 26, 26, 0.8) 0%, rgba(62, 33, 22, 0.8) 100%);
+        }
+        
+        .quality-category {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255, 152, 0, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #ff9800;
+        }
+        
+        .category-name {
+            flex: 1;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+        
+        .category-score {
+            width: 60px;
+            text-align: center;
+            font-weight: bold;
+            color: #ff9800;
+            margin-right: 15px;
+        }
+        
+        .category-bar {
+            width: 100px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .category-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f44336 0%, #ff9800 50%, #4caf50 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .recent-decision {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin-bottom: 8px;
+            background: rgba(255, 152, 0, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #ff9800;
+        }
+        
+        .decision-time {
+            font-size: 0.9rem;
+            color: #a0a0a0;
+        }
+        
+        .decision-score {
+            font-weight: bold;
+            color: #ff9800;
+        }
+        
+        .recommendation {
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid;
+        }
+        
+        .recommendation.priority-HIGH {
+            border-left-color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+        
+        .recommendation.priority-MEDIUM {
+            border-left-color: #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+        }
+        
+        .recommendation.priority-CRITICAL {
+            border-left-color: #9c27b0;
+            background: rgba(156, 39, 176, 0.1);
+        }
+        
+        .recommendation-title {
+            font-weight: bold;
+            color: #e0e0e0;
+            margin-bottom: 5px;
+        }
+        
+        .recommendation-message {
+            color: #b0b0b0;
+            margin-bottom: 10px;
+        }
+        
+        .recommendation-steps {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .recommendation-steps li {
+            padding: 3px 0;
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+        
+        .recommendation-steps li:before {
+            content: "• ";
+            color: #ff9800;
+            font-weight: bold;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #a0a0a0;
+            font-style: italic;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -330,9 +490,227 @@
                     </div>
                     <div class="market-item">
                         <div class="market-symbol">NQ</div>
-                        <div class="market-price">-</div>
+                        <div class="market-price">$23,397.00</div>
                         <div class="market-change">-</div>
                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AI Transparency Dashboard -->
+        <div class="ai-transparency-section" style="margin-bottom: 30px;">
+            <h2 style="color: #4fbdba; margin-bottom: 20px;">🧠 AI BRAIN TRANSPARENCY - LIVE REASONING</h2>
+            
+            <!-- AI Brain Status -->
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div class="status-card">
+                    <h3>Current Signal</h3>
+                    <div class="status-value" id="ai-current-signal">HOLD</div>
+                    <div class="status-label" id="ai-signal-confidence">0% confidence</div>
+                </div>
+                <div class="status-card">
+                    <h3>Autonomous Executions</h3>
+                    <div class="status-value" id="ai-executions">0</div>
+                    <div class="status-label">AI Trades Today</div>
+                </div>
+                <div class="status-card">
+                    <h3>Execution Threshold</h3>
+                    <div class="status-value">75%</div>
+                    <div class="status-label">Min Confidence</div>
+                </div>
+            </div>
+            
+            <!-- AI Reasoning Grid -->
+            <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <!-- Current AI Analysis -->
+                <div class="panel">
+                    <h2>🔍 Current AI Analysis</h2>
+                    <div id="ai-current-analysis">
+                        <div class="analysis-item">
+                            <strong>Signal:</strong> <span id="current-signal-detail">No current signal</span>
+                        </div>
+                        <div class="analysis-item">
+                            <strong>Confidence:</strong> <span id="current-confidence-detail">0%</span>
+                        </div>
+                        <div class="analysis-item">
+                            <strong>Reasoning:</strong> <span id="current-reasoning">Waiting for market data...</span>
+                        </div>
+                        <div class="analysis-item">
+                            <strong>Target Price:</strong> <span id="current-target">Not set</span>
+                        </div>
+                        <div class="analysis-item">
+                            <strong>Stop Loss:</strong> <span id="current-stop">Not set</span>
+                        </div>
+                        <div class="analysis-item">
+                            <strong>Last Updated:</strong> <span id="analysis-timestamp">Never</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Technical Indicators -->
+                <div class="panel">
+                    <h2>📊 Technical Indicators</h2>
+                    <div id="technical-indicators">
+                        <div class="indicator-item">
+                            <strong>Trend:</strong> <span id="trend-direction">Unknown</span>
+                        </div>
+                        <div class="indicator-item">
+                            <strong>Strength:</strong> <span id="trend-strength">0%</span>
+                        </div>
+                        <div class="indicator-item">
+                            <strong>Volatility:</strong> <span id="volatility-level">Unknown</span>
+                        </div>
+                        <div class="indicator-item">
+                            <strong>Volume:</strong> <span id="volume-analysis">Unknown</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Reasoning Breakdown -->
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- Detailed Technical Analysis -->
+                <div class="panel">
+                    <h2>⚡ Technical Analysis Breakdown</h2>
+                    <div id="technical-breakdown">
+                        <div class="breakdown-section">
+                            <h4>Trend Analysis</h4>
+                            <div class="indicator-detail">
+                                <span>SMA Short:</span> <span id="sma-short">-</span>
+                            </div>
+                            <div class="indicator-detail">
+                                <span>SMA Long:</span> <span id="sma-long">-</span>
+                            </div>
+                            <div class="indicator-detail">
+                                <span>Direction:</span> <span id="trend-detail">-</span>
+                            </div>
+                        </div>
+                        <div class="breakdown-section">
+                            <h4>Momentum Analysis</h4>
+                            <div class="indicator-detail">
+                                <span>RSI:</span> <span id="rsi-value">50</span>
+                            </div>
+                            <div class="indicator-detail">
+                                <span>Momentum:</span> <span id="momentum-direction">Neutral</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Risk Assessment -->
+                <div class="panel">
+                    <h2>🛡️ Risk Assessment</h2>
+                    <div id="risk-assessment">
+                        <div class="risk-item">
+                            <strong>Risk Level:</strong> <span id="risk-level">Unknown</span>
+                        </div>
+                        <div class="risk-item">
+                            <strong>Position Size:</strong> <span id="position-size">1 contract</span>
+                        </div>
+                        <div class="risk-item">
+                            <strong>Risk Budget:</strong> <span id="risk-budget">0%</span>
+                        </div>
+                        <div class="risk-item">
+                            <strong>Circuit Breaker:</strong> <span id="circuit-breaker">Inactive</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Decision Quality Dashboard -->
+        <div class="decision-quality-section" style="margin-bottom: 30px;">
+            <h2 style="color: #4fbdba; margin-bottom: 20px;">📋 DECISION QUALITY - THE PROCESS BEHIND PROFITABILITY</h2>
+            
+            <!-- Decision Quality Overview -->
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div class="status-card">
+                    <h3>Overall Quality</h3>
+                    <div class="status-value" id="overall-decision-quality">0.00</div>
+                    <div class="status-label" id="overall-quality-label">Not Evaluated</div>
+                </div>
+                <div class="status-card">
+                    <h3>Total Evaluations</h3>
+                    <div class="status-value" id="total-evaluations">0</div>
+                    <div class="status-label">Decisions Evaluated</div>
+                </div>
+                <div class="status-card">
+                    <h3>Quality Trend</h3>
+                    <div class="status-value" id="quality-trend">-</div>
+                    <div class="status-label">Recent Direction</div>
+                </div>
+                <div class="status-card">
+                    <h3>Improvement Focus</h3>
+                    <div class="status-value" id="weakest-area">-</div>
+                    <div class="status-label">Area to Improve</div>
+                </div>
+            </div>
+            
+            <!-- Decision Quality Categories -->
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <!-- Quality Category Breakdown -->
+                <div class="panel">
+                    <h2>📊 Decision Quality Categories</h2>
+                    <div id="quality-categories">
+                        <div class="quality-category">
+                            <div class="category-name">Information Analysis</div>
+                            <div class="category-score" id="info-analysis-score">0.00</div>
+                            <div class="category-bar">
+                                <div class="category-fill" id="info-analysis-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="quality-category">
+                            <div class="category-name">Risk Assessment</div>
+                            <div class="category-score" id="risk-assessment-score">0.00</div>
+                            <div class="category-bar">
+                                <div class="category-fill" id="risk-assessment-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="quality-category">
+                            <div class="category-name">Execution Discipline</div>
+                            <div class="category-score" id="execution-discipline-score">0.00</div>
+                            <div class="category-bar">
+                                <div class="category-fill" id="execution-discipline-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="quality-category">
+                            <div class="category-name">Pattern Recognition</div>
+                            <div class="category-score" id="pattern-recognition-score">0.00</div>
+                            <div class="category-bar">
+                                <div class="category-fill" id="pattern-recognition-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="quality-category">
+                            <div class="category-name">Market Context</div>
+                            <div class="category-score" id="market-context-score">0.00</div>
+                            <div class="category-bar">
+                                <div class="category-fill" id="market-context-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="quality-category">
+                            <div class="category-name">Timing Quality</div>
+                            <div class="category-score" id="timing-quality-score">0.00</div>
+                            <div class="category-bar">
+                                <div class="category-fill" id="timing-quality-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Decision Scores -->
+                <div class="panel">
+                    <h2>🕒 Recent Decision Scores</h2>
+                    <div id="recent-decision-scores">
+                        <div class="no-data">No decisions evaluated yet</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Process Improvement Recommendations -->
+            <div class="panel">
+                <h2>💡 Process Improvement Recommendations</h2>
+                <div id="quality-recommendations">
+                    <div class="no-data">Complete some trades to get personalized recommendations</div>
                 </div>
             </div>
         </div>
@@ -463,7 +841,126 @@
             
             // Update market data
             if (data.market) {
-                // This would be expanded with real market data
+                // Update NQ price if available
+                if (data.market.price && data.market.symbol === 'NQU25-CME') {
+                    const nqPriceElements = document.querySelectorAll('.market-symbol');
+                    nqPriceElements.forEach(element => {
+                        if (element.textContent === 'NQ') {
+                            const priceElement = element.nextElementSibling;
+                            if (priceElement && priceElement.classList.contains('market-price')) {
+                                priceElement.textContent = '$' + data.market.price.toFixed(2);
+                            }
+                        }
+                    });
+                }
+                
+                // Update market data details in critical status
+                if (data.market.connected) {
+                    updateStatusBadge('market-feed-status', 'ACTIVE', '#4caf50');
+                    document.getElementById('market-feed-details').textContent = 
+                        `${data.market.symbol}: $${data.market.price} | Volume: ${data.market.volume}`;
+                } else {
+                    updateStatusBadge('market-feed-status', 'NO DATA', '#ff9800');
+                    document.getElementById('market-feed-details').textContent = 'Bridge disconnected';
+                }
+            }
+        }
+        
+        // AI Transparency Functions
+        async function updateAITransparency() {
+            try {
+                // Fetch current AI analysis
+                const analysisResponse = await fetch('/api/ai/current-analysis');
+                const analysisData = await analysisResponse.json();
+                
+                // Update AI signal status
+                document.getElementById('ai-current-signal').textContent = 
+                    analysisData.current_signal.signal || 'HOLD';
+                document.getElementById('ai-signal-confidence').textContent = 
+                    `${(analysisData.current_signal.confidence * 100).toFixed(0)}% confidence`;
+                
+                // Update AI stats
+                document.getElementById('ai-executions').textContent = 
+                    analysisData.ai_stats.autonomous_executions || '0';
+                
+                // Update current analysis details
+                document.getElementById('current-signal-detail').textContent = 
+                    analysisData.current_signal.signal || 'No current signal';
+                document.getElementById('current-confidence-detail').textContent = 
+                    `${(analysisData.current_signal.confidence * 100).toFixed(1)}%`;
+                document.getElementById('current-reasoning').textContent = 
+                    analysisData.current_signal.reasoning || 'Waiting for market data...';
+                document.getElementById('current-target').textContent = 
+                    analysisData.current_signal.target_price ? `$${analysisData.current_signal.target_price.toFixed(2)}` : 'Not set';
+                document.getElementById('current-stop').textContent = 
+                    analysisData.current_signal.stop_loss ? `$${analysisData.current_signal.stop_loss.toFixed(2)}` : 'Not set';
+                document.getElementById('analysis-timestamp').textContent = 
+                    new Date(analysisData.timestamp).toLocaleTimeString();
+                
+                // Update technical indicators
+                document.getElementById('trend-direction').textContent = 
+                    analysisData.current_analysis.trend_direction || 'Unknown';
+                document.getElementById('trend-strength').textContent = 
+                    `${(analysisData.current_analysis.trend_strength * 100).toFixed(0)}%`;
+                document.getElementById('volatility-level').textContent = 
+                    analysisData.current_analysis.volatility_level || 'Unknown';
+                document.getElementById('volume-analysis').textContent = 
+                    analysisData.current_analysis.volume_analysis || 'Unknown';
+                
+                // Fetch detailed reasoning breakdown
+                const reasoningResponse = await fetch('/api/ai/reasoning-breakdown');
+                const reasoningData = await reasoningResponse.json();
+                
+                // Update technical analysis breakdown
+                document.getElementById('sma-short').textContent = 
+                    reasoningData.technical_indicators.trend_analysis.sma_short.toFixed(2);
+                document.getElementById('sma-long').textContent = 
+                    reasoningData.technical_indicators.trend_analysis.sma_long.toFixed(2);
+                document.getElementById('trend-detail').textContent = 
+                    reasoningData.technical_indicators.trend_analysis.trend_direction;
+                document.getElementById('rsi-value').textContent = 
+                    reasoningData.technical_indicators.momentum_analysis.rsi.toFixed(1);
+                document.getElementById('momentum-direction').textContent = 
+                    reasoningData.technical_indicators.momentum_analysis.momentum;
+                
+                // Fetch risk assessment
+                const riskResponse = await fetch('/api/ai/risk-assessment');
+                const riskData = await riskResponse.json();
+                
+                // Update risk assessment
+                document.getElementById('risk-level').textContent = 
+                    riskData.current_risk.risk_level || 'Unknown';
+                document.getElementById('position-size').textContent = 
+                    `${riskData.position_sizing.final_size} contract${riskData.position_sizing.final_size !== 1 ? 's' : ''}`;
+                document.getElementById('risk-budget').textContent = 
+                    `${(riskData.current_risk.risk_budget_used * 100).toFixed(1)}%`;
+                document.getElementById('circuit-breaker').textContent = 
+                    riskData.circuit_breaker.active ? 'ACTIVE' : 'Inactive';
+                
+                // Color coding for signal confidence
+                const signalElement = document.getElementById('ai-current-signal');
+                const confidence = analysisData.current_signal.confidence;
+                if (confidence >= 0.75) {
+                    signalElement.style.color = '#4caf50'; // Green for high confidence
+                } else if (confidence >= 0.5) {
+                    signalElement.style.color = '#ff9800'; // Orange for medium confidence
+                } else {
+                    signalElement.style.color = '#f44336'; // Red for low confidence
+                }
+                
+                // Color coding for circuit breaker
+                const circuitElement = document.getElementById('circuit-breaker');
+                if (riskData.circuit_breaker.active) {
+                    circuitElement.style.color = '#f44336';
+                    circuitElement.style.fontWeight = 'bold';
+                } else {
+                    circuitElement.style.color = '#4caf50';
+                    circuitElement.style.fontWeight = 'normal';
+                }
+                
+            } catch (error) {
+                console.error('Error updating AI transparency:', error);
+                addLog('Failed to update AI transparency data', 'error');
             }
         }
         
@@ -659,9 +1156,134 @@
         loadServiceStatus();
         loadCriticalStatus();
         
+        // Decision Quality Functions
+        async function updateDecisionQuality() {
+            try {
+                // Fetch decision quality data
+                const qualityResponse = await fetch('/api/decision-quality/current');
+                const qualityData = await qualityResponse.json();
+                
+                // Update overview metrics
+                document.getElementById('overall-decision-quality').textContent = 
+                    qualityData.current_average.toFixed(2);
+                document.getElementById('overall-quality-label').textContent = 
+                    getQualityLabel(qualityData.current_average);
+                document.getElementById('total-evaluations').textContent = 
+                    qualityData.total_evaluations;
+                document.getElementById('quality-trend').textContent = 
+                    qualityData.quality_trend.charAt(0).toUpperCase() + qualityData.quality_trend.slice(1);
+                document.getElementById('weakest-area').textContent = 
+                    qualityData.weakest_area ? qualityData.weakest_area.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'None';
+                
+                // Update category scores
+                const categories = qualityData.category_averages || {};
+                updateCategoryScore('info-analysis', 'Information Analysis', categories.information_analysis || 0);
+                updateCategoryScore('risk-assessment', 'Risk Assessment', categories.risk_assessment || 0);
+                updateCategoryScore('execution-discipline', 'Execution Discipline', categories.execution_discipline || 0);
+                updateCategoryScore('pattern-recognition', 'Pattern Recognition', categories.pattern_recognition || 0);
+                updateCategoryScore('market-context', 'Market Context', categories.market_context || 0);
+                updateCategoryScore('timing-quality', 'Timing Quality', categories.timing_quality || 0);
+                
+                // Update recent decisions
+                updateRecentDecisions(qualityData.recent_scores);
+                
+                // Fetch and update recommendations
+                const summaryResponse = await fetch('/api/decision-quality/summary');
+                const summaryData = await summaryResponse.json();
+                updateRecommendations(summaryData.recommendations);
+                
+            } catch (error) {
+                console.error('Error updating decision quality:', error);
+                addLog('Failed to update decision quality data', 'error');
+            }
+        }
+        
+        function getQualityLabel(score) {
+            if (score >= 0.85) return 'EXCELLENT';
+            if (score >= 0.70) return 'GOOD';
+            if (score >= 0.50) return 'ACCEPTABLE';
+            return 'POOR';
+        }
+        
+        function updateCategoryScore(categoryId, categoryName, score) {
+            const scoreElement = document.getElementById(categoryId + '-score');
+            const fillElement = document.getElementById(categoryId + '-fill');
+            
+            if (scoreElement && fillElement) {
+                scoreElement.textContent = score.toFixed(2);
+                fillElement.style.width = (score * 100) + '%';
+                
+                // Color coding based on score
+                if (score >= 0.75) {
+                    fillElement.style.background = '#4caf50';
+                } else if (score >= 0.5) {
+                    fillElement.style.background = '#ff9800';
+                } else {
+                    fillElement.style.background = '#f44336';
+                }
+            }
+        }
+        
+        function updateRecentDecisions(recentScores) {
+            const container = document.getElementById('recent-decision-scores');
+            
+            if (!recentScores || recentScores.length === 0) {
+                container.innerHTML = '<div class="no-data">No decisions evaluated yet</div>';
+                return;
+            }
+            
+            let html = '';
+            recentScores.slice(-5).reverse().forEach(score => {  // Show last 5, most recent first
+                const timestamp = new Date(score.timestamp);
+                const timeString = timestamp.toLocaleTimeString();
+                
+                html += `
+                    <div class="recent-decision">
+                        <div>
+                            <div class="decision-time">${timeString}</div>
+                            <div style="font-size: 0.8rem; color: #a0a0a0;">${score.decision_id}</div>
+                        </div>
+                        <div class="decision-score">${score.overall_score.toFixed(2)}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function updateRecommendations(recommendations) {
+            const container = document.getElementById('quality-recommendations');
+            
+            if (!recommendations || recommendations.length === 0) {
+                container.innerHTML = '<div class="no-data">Great job! No major issues identified.</div>';
+                return;
+            }
+            
+            let html = '';
+            recommendations.forEach(rec => {
+                html += `
+                    <div class="recommendation priority-${rec.priority}">
+                        <div class="recommendation-title">${rec.category} - ${rec.priority} Priority</div>
+                        <div class="recommendation-message">${rec.message}</div>
+                        <ul class="recommendation-steps">
+                            ${rec.actionable_steps.map(step => `<li>${step}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
         // Update intervals
         setInterval(loadServiceStatus, 10000); // Update every 10 seconds
         setInterval(loadCriticalStatus, 5000);  // Update critical status every 5 seconds
+        setInterval(updateAITransparency, 2000); // Update AI transparency every 2 seconds
+        setInterval(updateDecisionQuality, 3000); // Update decision quality every 3 seconds
+        
+        // Initial loads
+        updateAITransparency();
+        updateDecisionQuality();
     </script>
 </body>
 </html>

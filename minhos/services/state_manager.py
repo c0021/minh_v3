@@ -947,6 +947,16 @@ _state_manager: Optional[StateManager] = None
 
 def get_state_manager() -> StateManager:
     """Get global state manager instance"""
+    # First try to get running instance from live trading integration
+    try:
+        from .live_trading_integration import get_running_service
+        running_instance = get_running_service('state_manager')
+        if running_instance:
+            return running_instance
+    except ImportError:
+        pass
+    
+    # Fallback to singleton pattern
     global _state_manager
     if _state_manager is None:
         _state_manager = StateManager()

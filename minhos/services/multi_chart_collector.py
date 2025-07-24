@@ -247,8 +247,12 @@ class MultiChartCollector(BaseService):
         if not nq_data:
             return "UNKNOWN"
         
-        # Get recent price history
-        nq_history = list(self.historical_data['NQ_1MIN'])
+        # Get recent price history from unified store
+        nq_config = self.chart_configs.get('NQ_1MIN')
+        if not nq_config:
+            return "UNKNOWN"
+            
+        nq_history = self.market_data_adapter.get_historical_data(nq_config.symbol, limit=10)
         if len(nq_history) < 10:
             return "INSUFFICIENT_DATA"
         
@@ -370,12 +374,20 @@ class MultiChartCollector(BaseService):
             chart_id = request.get('chart_id', 'NQ_1MIN')
             limit = min(request.get('limit', 100), 1000)
             
-            history = list(self.historical_data[chart_id])[-limit:]
-            await websocket.send(json.dumps({
-                'type': 'historical_data',
-                'chart_id': chart_id,
-                'data': [asdict(d) for d in history]
-            }, default=str))
+            # Get historical data from unified store
+            config = self.chart_configs.get(chart_id)
+            if config:
+                history = self.market_data_adapter.get_historical_data(config.symbol, limit=limit)
+                await websocket.send(json.dumps({
+                    'type': 'historical_data',
+                    'chart_id': chart_id,
+                    'data': [asdict(d) for d in history]
+                }, default=str))
+            else:
+                await websocket.send(json.dumps({
+                    'type': 'error',
+                    'message': f'Unknown chart_id: {chart_id}'
+                }, default=str))
     
     def get_status(self) -> Dict:
         """Get current service status"""

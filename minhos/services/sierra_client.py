@@ -26,6 +26,7 @@ import json
 import logging
 import os
 import time
+import socket
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 import aiohttp
@@ -91,9 +92,9 @@ class SierraClient(BaseService):
         super().__init__("sierra_client", 9003)  # WebSocket port for market data relay
         self.config = config
         
-        # Bridge connection settings
-        self.bridge_hostname = os.getenv('BRIDGE_HOSTNAME', 'cthinkpad')
-        self.bridge_port = int(os.getenv('BRIDGE_PORT', '8765'))
+        # Bridge connection settings - check multiple sources
+        self.bridge_hostname = self._get_bridge_hostname()
+        self.bridge_port = self._get_bridge_port()
         self.bridge_url = f"http://{self.bridge_hostname}:{self.bridge_port}"
         
         # Connection management
@@ -120,6 +121,111 @@ class SierraClient(BaseService):
         
         logger.info(f"Sierra Client initialized - Bridge: {self.bridge_url}")
     
+    def _get_bridge_hostname(self) -> str:
+        """Get bridge hostname from multiple sources"""
+        # 1. Check environment variable
+        hostname = os.getenv('BRIDGE_HOSTNAME')
+        if hostname:
+            return hostname
+        
+        # 2. Check .env file
+        env_file = os.path.join(os.path.dirname(__file__), '../../.env')
+        if os.path.exists(env_file):
+            try:
+                with open(env_file, 'r') as f:
+                    for line in f:
+                        if line.startswith('BRIDGE_HOSTNAME='):
+                            hostname = line.split('=', 1)[1].strip()
+                            if hostname:
+                                return hostname
+            except Exception as e:
+                logger.debug(f"Could not read .env file: {e}")
+        
+        # 3. Default fallback
+        return 'cthinkpad'
+    
+    def _get_bridge_port(self) -> int:
+        """Get bridge port from multiple sources"""
+        # 1. Check environment variable
+        port = os.getenv('BRIDGE_PORT')
+        if port:
+            try:
+                return int(port)
+            except ValueError:
+                logger.warning(f"Invalid BRIDGE_PORT: {port}, using default")
+        
+        # 2. Check .env file
+        env_file = os.path.join(os.path.dirname(__file__), '../../.env')
+        if os.path.exists(env_file):
+            try:
+                with open(env_file, 'r') as f:
+                    for line in f:
+                        if line.startswith('BRIDGE_PORT='):
+                            port = line.split('=', 1)[1].strip()
+                            if port:
+                                try:
+                                    return int(port)
+                                except ValueError:
+                                    logger.warning(f"Invalid port in .env: {port}")
+            except Exception as e:
+                logger.debug(f"Could not read .env file: {e}")
+        
+        # 3. Default fallback
+        return 8765
+    
+    async def _create_optimized_session(self) -> aiohttp.ClientSession:
+        """Create aiohttp session with TCP optimizations to fix streaming issues"""
+        # Create connector with TCP_NODELAY to disable Nagle's Algorithm
+        connector = aiohttp.TCPConnector(
+            limit=100,  # Connection pool size
+            ttl_dns_cache=300,
+            enable_cleanup_closed=True,
+            force_close=False,  # Keep connections alive
+            keepalive_timeout=30
+        )
+        
+        # Set TCP_NODELAY on the connector
+        async def on_connection_create_func(session, trace_config_ctx, params):
+            """Set TCP_NODELAY when connection is created"""
+            # The params object has different attributes depending on aiohttp version
+            # Try to get the transport/connection from available attributes
+            transport = None
+            if hasattr(params, 'transport'):
+                transport = params.transport
+            elif hasattr(params, 'connection'):
+                transport = params.connection.transport if hasattr(params.connection, 'transport') else None
+            
+            if transport:
+                sock = transport.get_extra_info('socket')
+                if sock is not None:
+                    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                    # Linux-specific: Enable TCP_QUICKACK if available
+                    if hasattr(socket, 'TCP_QUICKACK'):
+                        try:
+                            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
+                        except:
+                            pass
+                    logger.debug("TCP optimizations applied to connection")
+        
+        # Create trace config to intercept connection creation
+        trace_config = aiohttp.TraceConfig()
+        trace_config.on_connection_create_end.append(on_connection_create_func)
+        
+        # Create session with optimizations
+        session = aiohttp.ClientSession(
+            connector=connector,
+            trace_configs=[trace_config],
+            timeout=aiohttp.ClientTimeout(total=30, connect=5, sock_read=10),
+            headers={
+                'Connection': 'keep-alive',
+                'Keep-Alive': 'timeout=30, max=100',
+                'User-Agent': 'MinhOS-Sierra-Client/3.0'
+            }
+        )
+        
+        logger.info("Created optimized HTTP session with TCP_NODELAY enabled")
+        return session
+    
     async def start(self):
         """Start the Sierra Client service"""
         await super().start()
@@ -127,8 +233,8 @@ class SierraClient(BaseService):
         # Set running flag for background tasks
         self.running = True
         
-        # Create HTTP session
-        self.session = aiohttp.ClientSession()
+        # Create HTTP session with TCP optimizations
+        self.session = await self._create_optimized_session()
         
         # Start connection management
         asyncio.create_task(self._connection_manager())
@@ -161,6 +267,7 @@ class SierraClient(BaseService):
                     
                     # Test bridge health
                     health = await self._check_bridge_health()
+                    logger.info(f"Health check result: {health}")
                     if health and health.get('status') == 'healthy':
                         self.connection_state = ConnectionState.CONNECTED
                         attempt = 0  # Reset attempt counter on success
@@ -196,12 +303,26 @@ class SierraClient(BaseService):
     async def _check_bridge_health(self) -> Optional[Dict]:
         """Check Windows bridge health"""
         try:
-            async with self.session.get(f"{self.bridge_url}/health", timeout=10) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-                return None
+            if not self.session:
+                logger.info("Session not initialized yet, creating temporary session for health check")
+                async with aiohttp.ClientSession() as temp_session:
+                    async with temp_session.get(f"{self.bridge_url}/health", timeout=10) as resp:
+                        if resp.status == 200:
+                            return await resp.json()
+                        else:
+                            logger.error(f"Health check returned status {resp.status}")
+                            return None
+            else:
+                async with self.session.get(f"{self.bridge_url}/health", timeout=10) as resp:
+                    if resp.status == 200:
+                        return await resp.json()
+                    else:
+                        logger.error(f"Health check returned status {resp.status}")
+                        return None
         except Exception as e:
-            logger.debug(f"Health check failed: {e}")
+            logger.error(f"Health check exception: {type(e).__name__}: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return None
     
     async def _verify_connection(self) -> bool:
@@ -223,12 +344,12 @@ class SierraClient(BaseService):
                     market_data = await self.get_market_data()
                     
                     if market_data:
-                        logger.info(f"🔄 Streaming: {market_data.symbol} @ ${market_data.close}")
+                        logger.debug(f"🔄 Streaming: {market_data.symbol} @ ${market_data.close}")
                         # Store and broadcast to subscribers
                         self.last_market_data[market_data.symbol] = market_data
-                        logger.info("🎯 About to call _broadcast_market_data...")
+                        logger.debug("🎯 About to call _broadcast_market_data...")
                         await self._broadcast_market_data(market_data)
-                        logger.info("🎯 _broadcast_market_data completed")
+                        logger.debug("🎯 _broadcast_market_data completed")
                     else:
                         logger.debug("No market data received from bridge")
                 else:

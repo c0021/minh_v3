@@ -39,8 +39,21 @@ from minhos.services.state_manager import StateManager
 from minhos.services.risk_manager import RiskManager
 from minhos.services.trading_engine import TradingEngine, TradingDecision
 from minhos.services.ai_brain_service import AIBrainService
+from minhos.dashboard.main import DashboardServer
 
 logger = logging.getLogger(__name__)
+
+# Global registry for running service instances
+_running_services = {}
+
+def register_running_service(name: str, instance):
+    """Register a running service instance"""
+    _running_services[name] = instance
+    logger.debug(f"Registered running service: {name}")
+
+def get_running_service(name: str):
+    """Get a running service instance"""
+    return _running_services.get(name)
 
 @dataclass
 class LiveTradingStatus:
@@ -70,6 +83,7 @@ class LiveTradingIntegration(BaseService):
         self.risk_manager: Optional[RiskManager] = None
         self.trading_engine: Optional[TradingEngine] = None
         self.ai_brain: Optional[AIBrainService] = None
+        self.dashboard_server: Optional[DashboardServer] = None
         
         # Integration settings
         self.live_trading_enabled = os.getenv('ENABLE_LIVE_TRADING', 'false').lower() == 'true'
@@ -103,7 +117,10 @@ class LiveTradingIntegration(BaseService):
             # 4. Initialize AI and trading services
             await self._initialize_trading_services()
             
-            # 5. Start integration loops
+            # 5. Start dashboard server
+            await self._start_dashboard()
+            
+            # 6. Start integration loops
             await self._start_integration_loops()
             
             logger.info("🚀 MinhOS v3 Live Trading System ONLINE!")
@@ -119,10 +136,12 @@ class LiveTradingIntegration(BaseService):
         # State manager (foundation service)
         self.state_manager = StateManager()
         await self.state_manager.start()
+        register_running_service('state_manager', self.state_manager)
         
         # Risk manager
         self.risk_manager = RiskManager()
         await self.risk_manager.start()
+        register_running_service('risk_manager', self.risk_manager)
         
         logger.info("✅ Core services initialized")
     
@@ -133,6 +152,7 @@ class LiveTradingIntegration(BaseService):
         # Create Sierra Client
         self.sierra_client = SierraClient()
         await self.sierra_client.start()
+        register_running_service('sierra_client', self.sierra_client)
         
         # Wait for connection to establish
         max_wait = 30  # seconds
@@ -156,6 +176,7 @@ class LiveTradingIntegration(BaseService):
         # Create multi-chart collector
         self.multi_chart_collector = MultiChartCollector(self.sierra_client)
         await self.multi_chart_collector.start()
+        register_running_service('multi_chart_collector', self.multi_chart_collector)
         
         # Wait for initial data
         await asyncio.sleep(5)
@@ -169,12 +190,33 @@ class LiveTradingIntegration(BaseService):
         # AI Brain service
         self.ai_brain = AIBrainService()
         await self.ai_brain.start()
+        register_running_service('ai_brain', self.ai_brain)
         
         # Trading engine
         self.trading_engine = TradingEngine()
         await self.trading_engine.start()
+        register_running_service('trading_engine', self.trading_engine)
         
         logger.info("✅ AI and trading services initialized")
+    
+    async def _start_dashboard(self):
+        """Start the web dashboard"""
+        logger.info("Starting web dashboard...")
+        
+        # Create dashboard server
+        self.dashboard_server = DashboardServer(host="0.0.0.0", port=8888)
+        
+        # Start dashboard in background task
+        asyncio.create_task(self._run_dashboard())
+        
+        logger.info("✅ Dashboard server started on http://localhost:8888")
+    
+    async def _run_dashboard(self):
+        """Run dashboard server in background"""
+        try:
+            await self.dashboard_server.start()
+        except Exception as e:
+            logger.error(f"Dashboard server error: {e}")
     
     async def _start_integration_loops(self):
         """Start main integration loops"""
@@ -218,6 +260,7 @@ class LiveTradingIntegration(BaseService):
                         
                         # Send to AI brain for analysis
                         if self.ai_brain:
+                            logger.debug(f"🧠 Sending market data to AI Brain: {market_data['symbol']} @ ${market_data['price']}")
                             await self.ai_brain.process_market_data(market_data)
                 
                 await asyncio.sleep(5.0)  # Analyze every 5 seconds
@@ -346,9 +389,9 @@ class LiveTradingIntegration(BaseService):
         positions_count = 0
         daily_pnl = 0.0
         if self.state_manager:
-            positions = await self.state_manager.get_all_positions()
-            positions_count = len([p for p in positions if p.quantity != 0])
-            daily_pnl = sum(p.unrealized_pnl for p in positions)
+            positions = self.state_manager.get_all_positions()
+            positions_count = len([p for p in positions.values() if p.quantity != 0])
+            daily_pnl = sum(p.unrealized_pnl for p in positions.values())
         
         # Pending decisions
         pending_decisions = 0
@@ -488,6 +531,14 @@ class LiveTradingIntegration(BaseService):
             self.risk_manager,
             self.state_manager
         ]
+        
+        # Stop dashboard server
+        if self.dashboard_server:
+            try:
+                logger.info("Stopping dashboard server...")
+                await self.dashboard_server.stop()
+            except Exception as e:
+                logger.error(f"Error stopping dashboard: {e}")
         
         for service in services:
             if service:

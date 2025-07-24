@@ -1037,6 +1037,16 @@ _risk_manager: Optional[RiskManager] = None
 
 def get_risk_manager() -> RiskManager:
     """Get global risk manager instance"""
+    # First try to get running instance from live trading integration
+    try:
+        from .live_trading_integration import get_running_service
+        running_instance = get_running_service('risk_manager')
+        if running_instance:
+            return running_instance
+    except ImportError:
+        pass
+    
+    # Fallback to singleton pattern
     global _risk_manager
     if _risk_manager is None:
         _risk_manager = RiskManager()

@@ -426,6 +426,7 @@ make profile
 ## 🎯 Roadmap
 
 ### v3.1 (Next Release)
+- [ ] **Natural Language Chat Interface** - Conversational trading assistant powered by Kimi K2 API
 - [ ] Advanced charting interface
 - [ ] Multiple broker integration
 - [ ] Mobile dashboard

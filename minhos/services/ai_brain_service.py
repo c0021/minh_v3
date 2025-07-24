@@ -530,11 +530,49 @@ class AIBrainService:
                 stop_loss=stop_loss
             )
             
+            # Add decision quality context for later evaluation
+            signal.decision_quality_context = {
+                'timeframes_analyzed': 1,  # Currently single timeframe
+                'volume_analysis': analysis.volume_analysis,
+                'indicators_used': ['trend', 'volume', 'volatility'],
+                'market_regime': getattr(analysis, 'market_regime', None),
+                'confidence_breakdown': {
+                    'trend_component': analysis.trend_strength,
+                    'volume_component': 1.0 if analysis.volume_analysis == "increasing" else 0.5,
+                    'volatility_adjustment': 0.8 if analysis.volatility_level == "high" else 1.0
+                },
+                'pattern_context': "Technical analysis based on trend and volume",
+                'market_session': self._get_market_session(),
+                'volatility_assessment': analysis.volatility_level,
+                'correlated_markets_checked': False,  # TODO: Implement
+                'event_risk_considered': False  # TODO: Implement
+            }
+            
             return signal
             
         except Exception as e:
             logger.error(f"❌ Signal generation error: {e}")
             return None
+    
+    def _get_market_session(self) -> str:
+        """Determine current market session"""
+        from datetime import datetime, time
+        now = datetime.now().time()
+        
+        # US market hours (Eastern Time)
+        pre_market = time(4, 0)
+        market_open = time(9, 30)
+        market_close = time(16, 0)
+        after_hours = time(20, 0)
+        
+        if pre_market <= now < market_open:
+            return "pre_market"
+        elif market_open <= now < market_close:
+            return "regular_hours"
+        elif market_close <= now < after_hours:
+            return "after_hours"
+        else:
+            return "closed"
     
     async def _signal_validation_loop(self):
         """Validate and track signal performance"""
@@ -666,6 +704,16 @@ _ai_brain_service: Optional[AIBrainService] = None
 
 def get_ai_brain_service() -> AIBrainService:
     """Get global AI Brain service instance"""
+    # First try to get running instance from live trading integration
+    try:
+        from .live_trading_integration import get_running_service
+        running_instance = get_running_service('ai_brain')
+        if running_instance:
+            return running_instance
+    except ImportError:
+        pass
+    
+    # Fallback to singleton pattern
     global _ai_brain_service
     if _ai_brain_service is None:
         _ai_brain_service = AIBrainService()

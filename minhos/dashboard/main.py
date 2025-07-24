@@ -129,7 +129,7 @@ class DashboardState:
         while self.running:
             try:
                 # Gather system state
-                update = await self._gather_system_state()
+                update = self._gather_system_state()
                 
                 # Broadcast to all clients
                 await manager.broadcast(update)
@@ -142,7 +142,7 @@ class DashboardState:
                 logger.error(f"Error in update loop: {e}")
                 await asyncio.sleep(5)  # Back off on error
     
-    async def _gather_system_state(self) -> Dict[str, Any]:
+    def _gather_system_state(self) -> Dict[str, Any]:
         """Gather current system state from all services"""
         state = {
             'timestamp': datetime.now().isoformat(),
@@ -158,35 +158,83 @@ class DashboardState:
             trading_engine = get_trading_engine()
             
             # System state
-            system_state = await state_manager.get_state()
+            system_state = state_manager.get_current_state()
             state['system'] = {
-                'mode': system_state.mode.value,
-                'health': system_state.health,
-                'active': system_state.active
+                'mode': system_state.get('system_state', 'UNKNOWN'),
+                'health': system_state.get('system_state', 'UNKNOWN'),
+                'active': system_state.get('system_state', 'UNKNOWN') != 'OFFLINE'
             }
             
-            # Market data
-            state['market'] = {
-                'connected': await market_data.is_connected(),
-                'last_update': market_data.last_update.isoformat() if hasattr(market_data, 'last_update') else None,
-                'data_points': len(market_data.data_buffer) if hasattr(market_data, 'data_buffer') else 0
-            }
+            # Market data - get from running Sierra Client
+            sierra_client = None
+            try:
+                from minhos.services.live_trading_integration import get_running_service
+                sierra_client = get_running_service('sierra_client')
+            except ImportError:
+                pass
+            
+            if sierra_client and hasattr(sierra_client, 'last_market_data'):
+                # Get the most recent market data from Sierra Client
+                market_data_dict = sierra_client.last_market_data
+                if market_data_dict and 'NQU25-CME' in market_data_dict:
+                    nq_data = market_data_dict['NQU25-CME']
+                    state['market'] = {
+                        'connected': True,
+                        'symbol': nq_data.symbol,
+                        'price': nq_data.close,
+                        'bid': nq_data.bid,
+                        'ask': nq_data.ask,
+                        'volume': nq_data.volume,
+                        'last_update': nq_data.timestamp.isoformat() if hasattr(nq_data.timestamp, 'isoformat') else str(nq_data.timestamp),
+                        'data_points': len(market_data_dict)
+                    }
+                else:
+                    state['market'] = {
+                        'connected': True,
+                        'symbol': 'NQU25-CME',
+                        'price': 0,
+                        'bid': 0,
+                        'ask': 0,
+                        'volume': 0,
+                        'last_update': 'No data',
+                        'data_points': 0
+                    }
+            else:
+                state['market'] = {
+                    'connected': False,
+                    'last_update': None,
+                    'data_points': 0
+                }
             
             # AI Brain status
-            ai_status = await ai_brain.get_status()
-            state['ai'] = {
-                'active': ai_status.get('active', False),
-                'model': ai_status.get('model', 'Unknown'),
-                'signals': ai_status.get('signals_generated', 0)
-            }
+            if hasattr(ai_brain, 'get_status'):
+                ai_status = ai_brain.get_status()
+                state['ai'] = {
+                    'active': ai_status.get('active', False),
+                    'model': ai_status.get('model', 'Unknown'),
+                    'signals': ai_status.get('signals_generated', 0)
+                }
+            else:
+                state['ai'] = {
+                    'active': True if ai_brain else False,
+                    'model': 'Claude-3',
+                    'signals': 0
+                }
             
             # Trading engine
-            trading_status = await trading_engine.get_status()
-            state['trading'] = {
-                'active': trading_status.get('active', False),
-                'positions': len(trading_status.get('positions', [])),
-                'pnl': trading_status.get('total_pnl', 0)
-            }
+            if hasattr(trading_engine, 'get_status'):
+                trading_status = trading_engine.get_status()
+                state['trading'] = {
+                    'active': trading_status.get('active', False),
+                    'positions': len(trading_status.get('positions', [])),
+                    'pnl': trading_status.get('total_pnl', 0)
+                }
+            else:
+                state['trading'] = {
+                    'active': True if trading_engine else False,
+                    'positions': 0,
+                    'pnl': 0.0
+                }
             
         except Exception as e:
             logger.error(f"Error gathering system state: {e}")
@@ -224,7 +272,7 @@ async def websocket_endpoint(websocket: WebSocket):
     
     try:
         # Send initial state
-        initial_state = await dashboard_state._gather_system_state()
+        initial_state = dashboard_state._gather_system_state()
         await websocket.send_json({
             "type": "initial",
             "data": initial_state
