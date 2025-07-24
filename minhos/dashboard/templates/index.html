@@ -77,6 +77,97 @@
             color: #4fbdba;
         }
         
+        /* Chat Interface Styles */
+        .status-connected {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        
+        .status-disconnected {
+            color: #ff9800;
+            font-weight: bold;
+        }
+        
+        .status-error {
+            color: #f44336;
+            font-weight: bold;
+        }
+        
+        .chat-message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        
+        .chat-message.user {
+            background: #1a2e2e;
+            border-left: 4px solid #4fbdba;
+            margin-left: auto;
+            margin-right: 0;
+        }
+        
+        .chat-message.ai {
+            background: #2e1a2e;
+            border-left: 4px solid #7ec8e3;
+            margin-left: 0;
+            margin-right: auto;
+        }
+        
+        .chat-message.system {
+            background: #2e2e1a;
+            border-left: 4px solid #ffc107;
+            margin: 0 auto;
+            text-align: center;
+            max-width: 90%;
+        }
+        
+        .chat-message.error {
+            background: #2e1a1a;
+            border-left: 4px solid #f44336;
+            margin: 0 auto;
+            max-width: 90%;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+        
+        .message-type {
+            font-weight: bold;
+        }
+        
+        .message-time {
+            color: #a0a0a0;
+        }
+        
+        .message-content {
+            line-height: 1.4;
+            color: #e0e0e0;
+        }
+        
+        #chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #chat-messages::-webkit-scrollbar-track {
+            background: #1a1a2e;
+            border-radius: 4px;
+        }
+        
+        #chat-messages::-webkit-scrollbar-thumb {
+            background: #4fbdba;
+            border-radius: 4px;
+        }
+        
+        #chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #7ec8e3;
+        }
+        
         .status-label {
             font-size: 0.9rem;
             color: #a0a0a0;
@@ -715,6 +806,38 @@
             </div>
         </div>
         
+        <!-- Chat Interface Panel -->
+        <div class="panel" style="background: #1a2e1a; border-color: #0f460f;">
+            <h2 style="color: #4fbdba;">💬 MinhOS Chat Assistant</h2>
+            <div class="chat-status-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px; background: #0f1f0f; border-radius: 5px;">
+                <span style="color: #7ec8e3;">Status: <span id="chat-status" class="status-disconnected">Connecting...</span></span>
+                <span style="color: #7ec8e3; font-size: 0.9rem;">Ask about markets, AI analysis, or system status</span>
+            </div>
+            
+            <div id="chat-messages" style="height: 300px; overflow-y: auto; border: 1px solid #0f460f; border-radius: 5px; padding: 10px; margin-bottom: 15px; background: #0a0a0a;">
+                <!-- Chat messages will appear here -->
+            </div>
+            
+            <div class="chat-input-container" style="display: flex; gap: 10px;">
+                <input type="text" id="chat-input" placeholder="Ask me about market data, AI signals, or system status..." 
+                       style="flex: 1; padding: 10px; border: 1px solid #0f460f; border-radius: 5px; background: #1a1a2e; color: #e0e0e0; font-size: 14px;">
+                <button onclick="sendChatMessage()" 
+                        style="padding: 10px 20px; background: #4fbdba; color: #0a0a0a; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    Send
+                </button>
+            </div>
+            
+            <div class="chat-examples" style="margin-top: 15px; padding: 10px; background: #0f1f0f; border-radius: 5px;">
+                <div style="color: #7ec8e3; font-weight: bold; margin-bottom: 8px;">Example commands:</div>
+                <div style="font-size: 0.85rem; color: #a0a0a0; line-height: 1.4;">
+                    • "Show me current market overview"<br>
+                    • "What's the AI signal confidence right now?"<br>
+                    • "Explain the latest decision quality score"<br>
+                    • "How is the system performing today?"
+                </div>
+            </div>
+        </div>
+        
         <!-- Critical Systems Status Panel -->
         <div class="panel">
             <h2>🚨 Critical Systems Status</h2>
@@ -1281,6 +1404,105 @@
         setInterval(updateAITransparency, 2000); // Update AI transparency every 2 seconds
         setInterval(updateDecisionQuality, 3000); // Update decision quality every 3 seconds
         
+        // Chat Interface Implementation
+        let chatWebSocket = null;
+        let chatConnected = false;
+        
+        function initializeChatInterface() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const chatWsUrl = `${protocol}//${window.location.host}/ws/chat`;
+            
+            try {
+                chatWebSocket = new WebSocket(chatWsUrl);
+                
+                chatWebSocket.onopen = function() {
+                    chatConnected = true;
+                    document.getElementById('chat-status').textContent = 'Connected';
+                    document.getElementById('chat-status').className = 'status-connected';
+                    console.log('Chat WebSocket connected');
+                };
+                
+                chatWebSocket.onmessage = function(event) {
+                    const message = JSON.parse(event.data);
+                    displayChatMessage(message);
+                };
+                
+                chatWebSocket.onclose = function() {
+                    chatConnected = false;
+                    document.getElementById('chat-status').textContent = 'Disconnected';
+                    document.getElementById('chat-status').className = 'status-error';
+                    console.log('Chat WebSocket disconnected');
+                    
+                    // Attempt to reconnect after 5 seconds
+                    setTimeout(initializeChatInterface, 5000);
+                };
+                
+                chatWebSocket.onerror = function(error) {
+                    console.error('Chat WebSocket error:', error);
+                    document.getElementById('chat-status').textContent = 'Error';
+                    document.getElementById('chat-status').className = 'status-error';
+                };
+                
+            } catch (error) {
+                console.error('Failed to initialize chat WebSocket:', error);
+            }
+        }
+        
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            
+            if (message && chatConnected) {
+                // Display user message immediately
+                displayChatMessage({
+                    content: message,
+                    type: 'user',
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Send to server
+                chatWebSocket.send(JSON.stringify({
+                    type: 'chat_message',
+                    content: message
+                }));
+                
+                // Clear input
+                input.value = '';
+            }
+        }
+        
+        function displayChatMessage(message) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${message.type}`;
+            
+            const timestamp = new Date(message.timestamp).toLocaleTimeString();
+            const typeLabel = message.type === 'user' ? 'You' : 'AI';
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-type">${typeLabel}</span>
+                    <span class="message-time">${timestamp}</span>
+                </div>
+                <div class="message-content">${message.content}</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Initialize chat when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Allow Enter key to send messages
+            document.getElementById('chat-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendChatMessage();
+                }
+            });
+            
+            initializeChatInterface();
+        });
+
         // Initial loads
         updateAITransparency();
         updateDecisionQuality();

@@ -85,8 +85,13 @@ class RiskManager:
     All trades must pass through this system for validation
     """
     
-    def __init__(self, db_path: str = "/tmp/minhos/risk.db"):
+    def __init__(self, db_path: str = None):
         """Initialize Risk Manager"""
+        if db_path is None:
+            # Move to permanent location in data directory
+            project_root = Path(__file__).parent.parent.parent
+            db_path = project_root / "data" / "risk.db"
+        
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(exist_ok=True)
         

@@ -17,6 +17,7 @@
 - **Market Regime Classification**: Current market condition identification
 - **Signal Generation**: Autonomous buy/sell signals with reasoning
 - **Decision Context**: Complete context generation for decision quality evaluation
+- **REAL TRADING ONLY**: All analysis and signals for live market execution - no paper trading or simulations
 
 #### Decision Quality Framework (`decision_quality.py`)
 - **Process Evaluation**: 6-category decision quality assessment

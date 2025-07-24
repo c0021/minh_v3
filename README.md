@@ -258,7 +258,7 @@ REDIS_URL=redis://localhost:6379/0
 # Trading
 MAX_POSITION_SIZE=100000.0        # Maximum position size
 MAX_DAILY_LOSS=5000.0            # Daily loss limit
-ENABLE_PAPER_TRADING=true        # Paper trading mode
+ENABLE_PAPER_TRADING=false       # REAL TRADING ONLY - Configure paper trading in Sierra Chart if needed
 
 # API
 API_PORT=8000                    # REST API port

@@ -95,7 +95,7 @@ class TradingConfig:
     max_drawdown: float = 10000.0
     position_sizing_method: str = "fixed"  # fixed, percent, volatility
     risk_free_rate: float = 0.02
-    enable_paper_trading: bool = True
+    enable_paper_trading: bool = False  # REAL TRADING ONLY - Configure paper trading in Sierra Chart if needed
     default_symbol: str = "NQ"
 
 
@@ -108,6 +108,43 @@ class AIConfig:
     max_features: int = 100
     enable_online_learning: bool = True
     pattern_memory_size: int = 10000
+
+
+@dataclass  
+class NLPConfig:
+    """Natural Language Processing configuration for chat interface"""
+    # Provider selection
+    primary_provider: str = "kimi_k2"
+    fallback_providers: List[str] = None
+    
+    # Kimi K2 settings
+    kimi_k2_api_key: str = ""
+    kimi_k2_base_url: str = "https://api.moonshot.cn/v1"
+    kimi_k2_model: str = "moonshot-v1-8k"
+    
+    # OpenAI settings  
+    openai_api_key: str = ""
+    openai_base_url: str = "https://api.openai.com/v1"
+    openai_model: str = "gpt-3.5-turbo"
+    
+    # Anthropic settings
+    anthropic_api_key: str = ""
+    anthropic_base_url: str = "https://api.anthropic.com"
+    anthropic_model: str = "claude-3-haiku-20240307"
+    
+    # Local LLM settings (Ollama)
+    local_llm_url: str = "http://localhost:11434"
+    local_llm_model: str = "llama2"
+    
+    # General settings
+    enable_chat_interface: bool = True
+    max_requests_per_minute: int = 50
+    request_timeout: float = 30.0
+    max_conversation_history: int = 50
+    
+    def __post_init__(self):
+        if self.fallback_providers is None:
+            self.fallback_providers = ["openai", "local"]
 
 
 @dataclass
@@ -161,6 +198,7 @@ class Config:
         self.websocket = WebSocketConfig(**self._get_config_section("websocket", {}))
         self.trading = TradingConfig(**self._get_config_section("trading", {}))
         self.ai = AIConfig(**self._get_config_section("ai", {}))
+        self.nlp = NLPConfig(**self._get_config_section("nlp", {}))
         self.logging = LoggingConfig(**self._get_config_section("logging", {}))
         
         # Override with environment variables
@@ -251,6 +289,13 @@ class Config:
             "MAX_DAILY_LOSS": ("trading", "max_daily_loss", float),
             "ENABLE_PAPER_TRADING": ("trading", "enable_paper_trading", lambda x: x.lower() in ['true', '1', 'yes']),
             
+            # NLP Chat Interface
+            "KIMI_K2_API_KEY": ("nlp", "kimi_k2_api_key"),
+            "OPENAI_API_KEY": ("nlp", "openai_api_key"),
+            "ANTHROPIC_API_KEY": ("nlp", "anthropic_api_key"),
+            "PRIMARY_NLP_PROVIDER": ("nlp", "primary_provider"),
+            "ENABLE_CHAT_INTERFACE": ("nlp", "enable_chat_interface", lambda x: x.lower() in ['true', '1', 'yes']),
+            
             # Logging
             "LOG_LEVEL": ("logging", "level"),
             "LOG_FILE": ("logging", "file_path"),
@@ -305,7 +350,8 @@ class Config:
             "api": self.api.__dict__,
             "websocket": self.websocket.__dict__,
             "trading": self.trading.__dict__,
-            "ai": self.ai.__dict__, 
+            "ai": self.ai.__dict__,
+            "nlp": self.nlp.__dict__,
             "logging": self.logging.__dict__,
         }
     
@@ -326,6 +372,11 @@ class Config:
 # Global configuration instance
 config = Config()
 
+# Convenience function
+def get_config() -> Config:
+    """Get the global configuration instance."""
+    return config
+
 # Convenience exports
 sierra_config = config.sierra
 database_config = config.database
@@ -334,4 +385,5 @@ api_config = config.api
 websocket_config = config.websocket
 trading_config = config.trading
 ai_config = config.ai
+nlp_config = config.nlp
 logging_config = config.logging

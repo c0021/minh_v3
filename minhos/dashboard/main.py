@@ -26,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from minhos.dashboard.api import router as api_router
+from minhos.dashboard.websocket_chat import websocket_router as chat_router
 from minhos.services import (
     get_market_data_service, get_state_manager, 
     get_ai_brain_service, get_trading_engine
@@ -62,6 +63,9 @@ templates = Jinja2Templates(directory=str(templates_dir))
 
 # Include API routes
 app.include_router(api_router, prefix="/api")
+
+# Include WebSocket chat routes
+app.include_router(chat_router)
 
 # WebSocket connection manager
 class ConnectionManager:

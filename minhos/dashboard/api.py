@@ -25,6 +25,7 @@ from minhos.services import (
     get_state_manager, get_ai_brain_service, get_trading_engine,
     get_pattern_analyzer, get_risk_manager
 )
+from minhos.services.chat_service import get_chat_service
 from minhos.services.state_manager import TradingState, SystemState
 from minhos.services.trading_engine import MarketRegime
 from minhos.services.risk_manager import RiskLevel
@@ -886,6 +887,100 @@ async def send_sierra_command(command: Dict[str, Any] = Body(...)):
         }
     except Exception as e:
         logger.error(f"Error sending Sierra command: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Chat interface endpoints
+@router.get("/chat/status")
+async def get_chat_status():
+    """Get chat service status and statistics"""
+    try:
+        chat_service = get_chat_service()
+        status = await chat_service.get_service_status()
+        
+        return {
+            "chat_status": status,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting chat status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/chat/conversation/{client_id}")
+async def get_conversation_history(
+    client_id: str,
+    limit: int = Query(50, description="Number of messages to return")
+):
+    """Get conversation history for a client"""
+    try:
+        chat_service = get_chat_service()
+        
+        if client_id not in chat_service.conversation_contexts:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        context = chat_service.conversation_contexts[client_id]
+        recent_messages = context.get_recent_context(limit)
+        
+        return {
+            "client_id": client_id,
+            "messages": recent_messages,
+            "message_count": len(recent_messages),
+            "session_start": context.session_start.isoformat(),
+            "timestamp": datetime.now().isoformat()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting conversation history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ChatTestRequest(BaseModel):
+    message: str = Field(..., description="Test message to process")
+    client_id: str = Field(default="test_client", description="Client ID for testing")
+
+@router.post("/chat/test")
+async def test_chat_processing(request: ChatTestRequest):
+    """Test chat message processing without WebSocket"""
+    try:
+        chat_service = get_chat_service()
+        
+        # Ensure test client has context
+        if request.client_id not in chat_service.conversation_contexts:
+            from minhos.services.chat_service import ConversationContext
+            chat_service.conversation_contexts[request.client_id] = ConversationContext()
+        
+        # Process message (but don't send via WebSocket)
+        context = chat_service.conversation_contexts[request.client_id].get_trading_context()
+        parsed_intent = await chat_service.nlp_manager.parse_intent(request.message, context)
+        
+        # Route to handler
+        response_data = await chat_service._route_intent(parsed_intent, context)
+        
+        # Generate response
+        nlp_response = await chat_service.nlp_manager.generate_response(
+            response_data, 
+            str(context), 
+            request.message
+        )
+        
+        return {
+            "input_message": request.message,
+            "parsed_intent": {
+                "intent": parsed_intent.intent,
+                "symbol": parsed_intent.symbol,
+                "indicator": parsed_intent.indicator,
+                "confidence": parsed_intent.confidence
+            },
+            "response_data": response_data,
+            "ai_response": {
+                "content": nlp_response.content,
+                "provider": nlp_response.provider,
+                "processing_time": nlp_response.processing_time,
+                "confidence": nlp_response.confidence
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error testing chat processing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Health check endpoint

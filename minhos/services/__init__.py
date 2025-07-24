@@ -59,6 +59,11 @@ from .risk_manager import (
     RiskViolation,
     get_risk_manager
 )
+from .sierra_historical_data import (
+    SierraHistoricalDataService,
+    SierraChartRecord,
+    get_sierra_historical_service
+)
 
 # Version information
 __version__ = "3.0.0"
@@ -74,7 +79,8 @@ SERVICES = {
     'ai_brain': get_ai_brain_service,
     'trading_engine': get_trading_engine,
     'pattern_analyzer': get_pattern_analyzer,
-    'risk_manager': get_risk_manager
+    'risk_manager': get_risk_manager,
+    'sierra_historical': get_sierra_historical_service
 }
 
 def get_service(service_name: str):

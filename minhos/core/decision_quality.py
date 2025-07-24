@@ -18,6 +18,8 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 import json
+import sqlite3
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -88,9 +90,22 @@ class DecisionQualityFramework:
     This is the core of our process-focused trading philosophy.
     """
     
-    def __init__(self):
+    def __init__(self, db_path: str = None):
         """Initialize the Decision Quality Framework"""
-        self.decision_history: List[DecisionQualityScore] = []
+        if db_path is None:
+            # Use permanent location in data directory
+            project_root = Path(__file__).parent.parent.parent
+            db_path = project_root / "data" / "decision_quality.db"
+        
+        self.db_path = Path(db_path)
+        self.db_path.parent.mkdir(exist_ok=True)
+        
+        # Initialize SQLite database
+        self._init_database()
+        
+        # Load existing decisions from database
+        self.decision_history: List[DecisionQualityScore] = self._load_decisions_from_db()
+        
         self.quality_thresholds = {
             'excellent': 0.85,
             'good': 0.70,
@@ -98,18 +113,10 @@ class DecisionQualityFramework:
             'poor': 0.0
         }
         
-        # Track improvement over time
-        self.quality_trends = {
-            'information_analysis': [],
-            'risk_assessment': [],
-            'execution_discipline': [],
-            'pattern_recognition': [],
-            'market_context': [],
-            'timing_quality': [],
-            'overall': []
-        }
+        # Track improvement over time (rebuilt from database)
+        self.quality_trends = self._rebuild_trends_from_history()
         
-        logger.info("Decision Quality Framework initialized")
+        logger.info(f"Decision Quality Framework initialized with {len(self.decision_history)} historical decisions")
     
     def evaluate_decision(self,
                          decision_id: str,
@@ -177,6 +184,9 @@ class DecisionQualityFramework:
         # Track the decision
         self.decision_history.append(score)
         self._update_quality_trends(score)
+        
+        # Save to database
+        self._save_decision_to_db(score)
         
         # Log the evaluation
         self._log_decision_quality(score)
@@ -497,6 +507,108 @@ class DecisionQualityFramework:
             json.dump(export_data, f, indent=2, default=str)
         
         logger.info(f"Decision quality history exported to {filepath}")
+    
+    def _init_database(self):
+        """Initialize SQLite database for decision quality persistence"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS decision_quality (
+                    decision_id TEXT PRIMARY KEY,
+                    timestamp TEXT NOT NULL,
+                    information_analysis REAL NOT NULL,
+                    risk_assessment REAL NOT NULL,
+                    execution_discipline REAL NOT NULL,
+                    pattern_recognition REAL NOT NULL,
+                    market_context REAL NOT NULL,
+                    timing_quality REAL NOT NULL,
+                    overall_score REAL NOT NULL,
+                    reasoning TEXT,
+                    lessons_learned TEXT,
+                    decision_details TEXT
+                )
+            """)
+            
+            # Create index for faster queries
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON decision_quality(timestamp)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_overall_score ON decision_quality(overall_score)")
+            conn.commit()
+    
+    def _save_decision_to_db(self, score: DecisionQualityScore):
+        """Save decision quality score to database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("""
+                    INSERT OR REPLACE INTO decision_quality VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    score.decision_id,
+                    score.timestamp.isoformat(),
+                    score.information_analysis,
+                    score.risk_assessment,
+                    score.execution_discipline,
+                    score.pattern_recognition,
+                    score.market_context,
+                    score.timing_quality,
+                    score.overall_score,
+                    json.dumps(score.reasoning),
+                    json.dumps(score.lessons_learned),
+                    json.dumps(score.decision_details, default=str)
+                ))
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Error saving decision to database: {e}")
+    
+    def _load_decisions_from_db(self) -> List[DecisionQualityScore]:
+        """Load existing decisions from database"""
+        decisions = []
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute("""
+                    SELECT * FROM decision_quality ORDER BY timestamp DESC LIMIT 100
+                """)
+                for row in cursor.fetchall():
+                    score = DecisionQualityScore(
+                        decision_id=row[0],
+                        timestamp=datetime.fromisoformat(row[1]),
+                        information_analysis=row[2],
+                        risk_assessment=row[3],
+                        execution_discipline=row[4],
+                        pattern_recognition=row[5],
+                        market_context=row[6],
+                        timing_quality=row[7],
+                        overall_score=row[8],
+                        reasoning=json.loads(row[9]) if row[9] else {},
+                        lessons_learned=json.loads(row[10]) if row[10] else [],
+                        decision_details=json.loads(row[11]) if row[11] else {}
+                    )
+                    decisions.append(score)
+        except Exception as e:
+            logger.error(f"Error loading decisions from database: {e}")
+        
+        return decisions
+    
+    def _rebuild_trends_from_history(self) -> Dict[str, List[float]]:
+        """Rebuild quality trends from historical data"""
+        trends = {
+            'information_analysis': [],
+            'risk_assessment': [],
+            'execution_discipline': [],
+            'pattern_recognition': [],
+            'market_context': [],
+            'timing_quality': [],
+            'overall': []
+        }
+        
+        # Get last 100 decisions for trends
+        for decision in self.decision_history[-100:]:
+            trends['information_analysis'].append(decision.information_analysis)
+            trends['risk_assessment'].append(decision.risk_assessment)
+            trends['execution_discipline'].append(decision.execution_discipline)
+            trends['pattern_recognition'].append(decision.pattern_recognition)
+            trends['market_context'].append(decision.market_context)
+            trends['timing_quality'].append(decision.timing_quality)
+            trends['overall'].append(decision.overall_score)
+        
+        return trends
 
 
 # Singleton instance

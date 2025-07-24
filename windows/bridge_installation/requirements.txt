@@ -1,4 +1,51 @@
+# MinhOS Sierra Chart Bridge - Python Dependencies
+# Enhanced bridge with historical data access capabilities
+# 
+# Core web framework and API
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
+websockets==12.0
 pydantic==2.5.0
+
+# HTTP client and networking
+aiohttp==3.9.1
+requests==2.31.0
+httpx==0.25.2
+
+# Data processing and analysis
+pandas==2.1.4
+numpy==1.24.4
+
+# File handling and compression
+pathlib2==2.3.7.post1
 python-multipart==0.0.6
+
+# Logging and monitoring
+structlog==23.2.0
+colorlog==6.8.0
+
+# Configuration and environment
+python-dotenv==1.0.0
+pyyaml==6.0.1
+
+# Date and time handling
+python-dateutil==2.8.2
+pytz==2023.3
+
+# System and OS utilities
+psutil==5.9.6
+win32-setctime==1.1.0; sys_platform == "win32"
+
+# Optional: Sierra Chart DTC protocol (if using native DTC)
+# dtc-protocol==1.0.0  # Uncomment if needed
+
+# Development and testing (optional)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+
+# Security and validation
+cryptography==41.0.8
+certifi==2023.11.17

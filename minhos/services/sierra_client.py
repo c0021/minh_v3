@@ -363,24 +363,6 @@ class SierraClient(BaseService):
                 logger.error(traceback.format_exc())
                 await asyncio.sleep(5.0)
     
-    async def _broadcast_market_data(self, market_data: MarketData):
-        """Broadcast market data to all registered handlers and unified store"""
-        logger.error("🚨 BROADCAST METHOD CALLED - THIS SHOULD ALWAYS APPEAR!")
-        
-        # Minimal implementation for testing
-        try:
-            logger.error(f"🔄 Broadcasting: {market_data.symbol}")
-            
-            # Forward to unified market data store
-            from ..core.market_data_adapter import get_market_data_adapter
-            adapter = get_market_data_adapter()
-            await adapter.async_add_data(market_data)
-            logger.error(f"✅ Stored: {market_data.symbol}")
-            
-        except Exception as e:
-            logger.error(f"Broadcast error: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
     
     async def get_market_data(self, symbol: str = None) -> Optional[MarketData]:
         """Get current market data from bridge"""

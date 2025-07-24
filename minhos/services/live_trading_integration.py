@@ -39,6 +39,7 @@ from minhos.services.state_manager import StateManager
 from minhos.services.risk_manager import RiskManager
 from minhos.services.trading_engine import TradingEngine, TradingDecision
 from minhos.services.ai_brain_service import AIBrainService
+from minhos.services.sierra_historical_data import SierraHistoricalDataService
 from minhos.dashboard.main import DashboardServer
 
 logger = logging.getLogger(__name__)
@@ -142,6 +143,11 @@ class LiveTradingIntegration(BaseService):
         self.risk_manager = RiskManager()
         await self.risk_manager.start()
         register_running_service('risk_manager', self.risk_manager)
+        
+        # Historical data service
+        self.historical_data_service = SierraHistoricalDataService()
+        await self.historical_data_service.start()
+        register_running_service('sierra_historical', self.historical_data_service)
         
         logger.info("✅ Core services initialized")
     
