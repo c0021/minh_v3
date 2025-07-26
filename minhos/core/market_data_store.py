@@ -247,33 +247,59 @@ class MarketDataStore:
                 return {symbol: self._latest_data.get(symbol)}
             return self._latest_data.copy()
     
-    def get_history(self, symbol: str, limit: int = 1000) -> List[MarketData]:
+    def get_history(self, symbol: str, limit: Optional[int] = 1000) -> List[MarketData]:
         """Get historical data for a symbol"""
         with self._lock:
             # First check memory cache
             memory_data = list(self._memory_cache.get(symbol, []))
             
-            if len(memory_data) >= limit:
+            if limit is not None and len(memory_data) >= limit:
                 return memory_data[:limit]
             
             # Fetch additional data from database if needed
-            remaining = limit - len(memory_data)
-            if remaining > 0 and memory_data:
-                oldest_timestamp = memory_data[-1].timestamp
-                
+            if limit is None or len(memory_data) < limit:
+                # Query database for more data
                 with sqlite3.connect(str(self.config.db_path)) as conn:
                     conn.row_factory = sqlite3.Row
-                    cursor = conn.execute("""
-                        SELECT * FROM market_data
-                        WHERE symbol = ? AND timestamp < ?
-                        ORDER BY timestamp DESC
-                        LIMIT ?
-                    """, (symbol, oldest_timestamp, remaining))
+                    
+                    if memory_data:
+                        # Get data older than what we have in memory
+                        oldest_timestamp = memory_data[-1].timestamp
+                        remaining = (limit - len(memory_data)) if limit is not None else None
+                        
+                        if remaining is not None:
+                            cursor = conn.execute("""
+                                SELECT * FROM market_data
+                                WHERE symbol = ? AND timestamp < ?
+                                ORDER BY timestamp DESC
+                                LIMIT ?
+                            """, (symbol, oldest_timestamp, remaining))
+                        else:
+                            cursor = conn.execute("""
+                                SELECT * FROM market_data
+                                WHERE symbol = ? AND timestamp < ?
+                                ORDER BY timestamp DESC
+                            """, (symbol, oldest_timestamp))
+                    else:
+                        # No memory data, get from database
+                        if limit is not None:
+                            cursor = conn.execute("""
+                                SELECT * FROM market_data
+                                WHERE symbol = ?
+                                ORDER BY timestamp DESC
+                                LIMIT ?
+                            """, (symbol, limit))
+                        else:
+                            cursor = conn.execute("""
+                                SELECT * FROM market_data
+                                WHERE symbol = ?
+                                ORDER BY timestamp DESC
+                            """, (symbol,))
                     
                     db_data = [self._row_to_market_data(row) for row in cursor]
                     memory_data.extend([d for d in db_data if d])
             
-            return memory_data[:limit]
+            return memory_data[:limit] if limit is not None else memory_data
     
     def get_timerange_data(
         self, 

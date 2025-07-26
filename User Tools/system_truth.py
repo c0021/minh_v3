@@ -184,8 +184,8 @@ class SystemTruth:
         
         # MinhOS v3 health check endpoints
         health_checks = [
-            ("sierra_bridge", "http://cthinkpad:8765/health", 8765),
-            ("sierra_bridge_market", "http://cthinkpad:8765/market-data", 8765),
+            ("sierra_bridge", "http://localhost:8765/health", 8765),
+            ("sierra_bridge_market", "http://localhost:8765/market-data", 8765),
             ("minhos_dashboard", "http://localhost:8888/health", 8888),
             ("minhos_api", "http://localhost:8888/api/status", 8888),
             ("live_integration", "http://localhost:9005/health", 9005),

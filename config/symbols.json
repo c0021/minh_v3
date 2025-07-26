@@ -1,0 +1,131 @@
+{
+  "version": "3.0.0",
+  "last_updated": "2025-07-25",
+  "environment": "production",
+  
+  "contracts": {
+    "NQ": {
+      "base_symbol": "NQ",
+      "exchange": "CME",
+      "asset_type": "futures",
+      "tick_size": 0.25,
+      "contract_size": 20,
+      "expiration_months": ["H", "M", "U", "Z"],
+      "days_before_rollover": 10,
+      "description": "NASDAQ-100 E-mini Futures"
+    },
+    "ES": {
+      "base_symbol": "ES", 
+      "exchange": "CME",
+      "asset_type": "futures",
+      "tick_size": 0.25,
+      "contract_size": 50,
+      "expiration_months": ["H", "M", "U", "Z"],
+      "days_before_rollover": 10,
+      "description": "S&P 500 E-mini Futures"
+    },
+    "YM": {
+      "base_symbol": "YM",
+      "exchange": "CBOT", 
+      "asset_type": "futures",
+      "tick_size": 1.0,
+      "contract_size": 5,
+      "expiration_months": ["H", "M", "U", "Z"], 
+      "days_before_rollover": 10,
+      "description": "Dow Jones E-mini Futures"
+    }
+  },
+  
+  "symbols": {
+    "NQ": {
+      "contract_key": "NQ",
+      "primary": true,
+      "timeframes": ["1min", "30min", "daily"],
+      "subscription_priority": 1,
+      "enabled": true,
+      "description": "Primary NASDAQ futures trading"
+    },
+    "ES": {
+      "contract_key": "ES",
+      "primary": false,
+      "timeframes": ["1min"],
+      "subscription_priority": 2,
+      "enabled": true,
+      "description": "S&P 500 backup/correlation analysis"
+    },
+    "EURUSD": {
+      "symbol": "EURUSD",
+      "asset_type": "forex",
+      "primary": false,
+      "timeframes": ["1min"],
+      "subscription_priority": 3,
+      "enabled": true,
+      "description": "EUR/USD forex pair"
+    },
+    "XAUUSD": {
+      "symbol": "XAUUSD", 
+      "asset_type": "forex",
+      "primary": false,
+      "timeframes": ["1min"],
+      "subscription_priority": 4,
+      "enabled": true,
+      "description": "Gold spot price"
+    },
+    "VIX": {
+      "symbol": "VIX_CGI",
+      "asset_type": "index",
+      "primary": false,
+      "timeframes": ["1min"],
+      "subscription_priority": 5,
+      "enabled": true,
+      "description": "Volatility Index"
+    }
+  },
+  
+  "environments": {
+    "production": {
+      "enabled_symbols": ["NQ", "ES", "EURUSD", "XAUUSD", "VIX"],
+      "max_concurrent_subscriptions": 10,
+      "rollover_alert_days": 15
+    },
+    "development": {
+      "enabled_symbols": ["NQ", "EURUSD"],
+      "max_concurrent_subscriptions": 5,
+      "rollover_alert_days": 30
+    },
+    "testing": {
+      "enabled_symbols": ["NQ"],
+      "max_concurrent_subscriptions": 2,
+      "rollover_alert_days": 7
+    }
+  },
+  
+  "rollover_schedule": {
+    "2025": {
+      "NQ": [
+        {"current": "NQU25-CME", "rollover_date": "2025-09-05", "next": "NQZ25-CME"},
+        {"current": "NQZ25-CME", "rollover_date": "2025-12-05", "next": "NQH26-CME"}
+      ],
+      "ES": [
+        {"current": "ESU25-CME", "rollover_date": "2025-09-05", "next": "ESZ25-CME"},
+        {"current": "ESZ25-CME", "rollover_date": "2025-12-05", "next": "ESH26-CME"}
+      ]
+    },
+    "2026": {
+      "NQ": [
+        {"current": "NQH26-CME", "rollover_date": "2026-03-05", "next": "NQM26-CME"},
+        {"current": "NQM26-CME", "rollover_date": "2026-06-05", "next": "NQU26-CME"}
+      ],
+      "ES": [
+        {"current": "ESH26-CME", "rollover_date": "2026-03-05", "next": "ESM26-CME"},
+        {"current": "ESM26-CME", "rollover_date": "2026-06-05", "next": "ESU26-CME"}
+      ]
+    }
+  },
+  
+  "alerts": {
+    "rollover_warning_days": [30, 15, 7, 3, 1],
+    "enabled_notifications": true,
+    "notification_channels": ["log", "dashboard", "email"]
+  }
+}

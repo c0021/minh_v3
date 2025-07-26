@@ -27,10 +27,12 @@ import uvicorn
 
 from minhos.dashboard.api import router as api_router
 from minhos.dashboard.websocket_chat import websocket_router as chat_router
+from minhos.dashboard.api_trading import router as trading_router
 from minhos.services import (
     get_market_data_service, get_state_manager, 
     get_ai_brain_service, get_trading_engine
 )
+# Removed resilient market data imports - NO FAKE DATA PHILOSOPHY
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,7 @@ templates = Jinja2Templates(directory=str(templates_dir))
 
 # Include API routes
 app.include_router(api_router, prefix="/api")
+app.include_router(trading_router)  # Trading API routes
 
 # Include WebSocket chat routes
 app.include_router(chat_router)
@@ -178,24 +181,27 @@ class DashboardState:
                 pass
             
             if sierra_client and hasattr(sierra_client, 'last_market_data'):
-                # Get the most recent market data from Sierra Client
+                # Get the most recent market data from Sierra Client (centralized symbol management)
+                from minhos.core.symbol_integration import get_ai_brain_primary_symbol
+                primary_symbol = get_ai_brain_primary_symbol()
+                
                 market_data_dict = sierra_client.last_market_data
-                if market_data_dict and 'NQU25-CME' in market_data_dict:
-                    nq_data = market_data_dict['NQU25-CME']
+                if market_data_dict and primary_symbol in market_data_dict:
+                    primary_data = market_data_dict[primary_symbol]
                     state['market'] = {
                         'connected': True,
-                        'symbol': nq_data.symbol,
-                        'price': nq_data.close,
-                        'bid': nq_data.bid,
-                        'ask': nq_data.ask,
-                        'volume': nq_data.volume,
-                        'last_update': nq_data.timestamp.isoformat() if hasattr(nq_data.timestamp, 'isoformat') else str(nq_data.timestamp),
+                        'symbol': primary_data.symbol,
+                        'price': primary_data.close,
+                        'bid': primary_data.bid,
+                        'ask': primary_data.ask,
+                        'volume': primary_data.volume,
+                        'last_update': primary_data.timestamp.isoformat() if hasattr(primary_data.timestamp, 'isoformat') else str(primary_data.timestamp),
                         'data_points': len(market_data_dict)
                     }
                 else:
                     state['market'] = {
                         'connected': True,
-                        'symbol': 'NQU25-CME',
+                        'symbol': primary_symbol,
                         'price': 0,
                         'bid': 0,
                         'ask': 0,
@@ -309,6 +315,9 @@ async def startup_event():
     """Initialize dashboard on startup"""
     logger.info("Starting MinhOS Dashboard...")
     await dashboard_state.start()
+    
+    # NO FAKE DATA - System fails honestly when no real Sierra Chart data available
+    logger.info("✅ Dashboard initialized - REAL DATA ONLY, fails honestly when disconnected")
 
 @app.on_event("shutdown")
 async def shutdown_event():

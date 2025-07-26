@@ -28,6 +28,7 @@ from minhos.services import (
 from minhos.services.chat_service import get_chat_service
 from minhos.services.state_manager import TradingState, SystemState
 from minhos.services.trading_engine import MarketRegime
+# Removed resilient market data import - NO FAKE DATA PHILOSOPHY
 from minhos.services.risk_manager import RiskLevel
 
 logger = logging.getLogger(__name__)
@@ -39,17 +40,24 @@ def get_live_market_data():
         sierra_client = get_running_service('sierra_client')
         
         if sierra_client and hasattr(sierra_client, 'last_market_data'):
+            # Get primary symbol from centralized symbol management
+            from ..core.symbol_integration import get_ai_brain_primary_symbol, get_symbol_integration
+            primary_symbol = get_ai_brain_primary_symbol()
+            
             market_data_dict = sierra_client.last_market_data
-            if market_data_dict and 'NQU25-CME' in market_data_dict:
-                nq_data = market_data_dict['NQU25-CME']
+            if market_data_dict and primary_symbol in market_data_dict:
+                primary_data = market_data_dict[primary_symbol]
+                
+                # Mark service as migrated to centralized symbol management
+                get_symbol_integration().mark_service_migrated('dashboard')
                 return {
                     "connected": True,
-                    "symbol": nq_data.symbol,
-                    "price": nq_data.close,
-                    "bid": nq_data.bid,
-                    "ask": nq_data.ask,
-                    "volume": nq_data.volume,
-                    "last_update": nq_data.timestamp.isoformat() if hasattr(nq_data.timestamp, 'isoformat') else str(nq_data.timestamp),
+                    "symbol": primary_data.symbol,
+                    "price": primary_data.close,
+                    "bid": primary_data.bid,
+                    "ask": primary_data.ask,
+                    "volume": primary_data.volume,
+                    "last_update": primary_data.timestamp.isoformat() if hasattr(primary_data.timestamp, 'isoformat') else str(primary_data.timestamp),
                     "data_points": len(market_data_dict),
                     "symbols": list(market_data_dict.keys())
                 }
@@ -246,6 +254,9 @@ async def get_available_symbols():
     except Exception as e:
         logger.error(f"Error getting symbols: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# REMOVED: Resilient market data endpoints - NO FAKE DATA PHILOSOPHY
+# System must fail honestly when Sierra Chart data unavailable
 
 # AI Transparency endpoints
 @router.get("/ai/current-analysis")
@@ -982,6 +993,60 @@ async def test_chat_processing(request: ChatTestRequest):
     except Exception as e:
         logger.error(f"Error testing chat processing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Symbol management endpoints
+@router.get("/symbols/rollover-status")
+async def get_rollover_status():
+    """Get contract rollover status for dashboard"""
+    try:
+        from ..core.symbol_integration import get_symbol_integration
+        # Check for rollovers within next 60 days for dashboard visibility
+        rollover_data = get_symbol_integration().check_rollover_status()
+        
+        # Get wider rollover alerts for dashboard (60 days ahead)
+        symbol_manager = get_symbol_integration().symbol_manager
+        wider_alerts = symbol_manager.get_rollover_alerts(days_ahead=60)
+        rollover_data['alerts'] = wider_alerts
+
+        # Format for dashboard display
+        dashboard_alerts = []
+        for alert in rollover_data.get('alerts', []):
+            days_until = alert['days_until_rollover']
+
+            # Determine alert level
+            if days_until <= 7:
+                level = "critical"
+                color = "#ff4444"
+            elif days_until <= 15:
+                level = "warning"
+                color = "#ffaa00"
+            elif days_until <= 30:
+                level = "info"
+                color = "#44aaff"
+            else:
+                level = "normal"
+                color = "#44ff44"
+
+            dashboard_alerts.append({
+                "symbol": alert['current_contract'],
+                "next_symbol": alert['next_contract'],
+                "days_until": days_until,
+                "rollover_date": alert['rollover_date'].strftime('%Y-%m-%d'),
+                "level": level,
+                "color": color,
+                "action_required": alert['action_required']
+            })
+
+        return {
+            "status": "success",
+            "alerts": dashboard_alerts,
+            "total_upcoming": len(dashboard_alerts),
+            "urgent_count": len([a for a in dashboard_alerts if a['level'] in ['critical', 'warning']]),
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
 
 # Health check endpoint
 @router.get("/health")

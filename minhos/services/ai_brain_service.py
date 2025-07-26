@@ -25,6 +25,8 @@ from collections import deque
 from .sierra_client import get_sierra_client
 from ..models.market import MarketData
 from .state_manager import get_state_manager
+from ..core.market_data_adapter import get_market_data_adapter
+from .sierra_historical_data import get_sierra_historical_service
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -93,8 +95,13 @@ class AIBrainService:
             "volatility_period": 20,
             "volume_period": 20,
             "confidence_threshold": 0.6,
-            "strong_signal_threshold": 0.8
+            "strong_signal_threshold": 0.8,
+            "min_volume_threshold": 100,  # Minimum volume for real-time analysis
+            "historical_fallback_days": 7  # Days of historical data to use as fallback
         }
+        
+        # Historical data service
+        self.historical_service = None
         
         # Current state
         self.current_signal: Optional[TradingSignal] = None
@@ -104,6 +111,7 @@ class AIBrainService:
         # Service references
         self.sierra_client = None
         self.state_manager = None
+        self.market_data_adapter = get_market_data_adapter()
         
         # Statistics
         self.stats = {
@@ -121,14 +129,75 @@ class AIBrainService:
         
         logger.info("🧠 AI Brain Service initialized")
     
+    async def _load_historical_context(self):
+        """Load historical market data for AI context"""
+        try:
+            # Get primary trading symbol (centralized symbol management)
+            from ..core.symbol_integration import get_ai_brain_primary_symbol, get_symbol_integration
+            primary_symbol = get_ai_brain_primary_symbol()
+            
+            # Mark service as migrated to centralized symbol management
+            get_symbol_integration().mark_service_migrated('ai_brain_service')
+            
+            # Load substantial historical context (200 records for deep analysis)
+            historical_data = self.market_data_adapter.get_historical_data(primary_symbol, limit=200)
+            
+            if historical_data:
+                logger.info(f"🧠 Loading {len(historical_data)} historical records for AI context...")
+                
+                # Convert to AI Brain format and populate buffer
+                for data in reversed(historical_data):  # Reverse to maintain chronological order
+                    try:
+                        data_point = {
+                            'timestamp': data.timestamp,
+                            'symbol': data.symbol,
+                            'close': data.close,
+                            'bid': getattr(data, 'bid', data.close),
+                            'ask': getattr(data, 'ask', data.close), 
+                            'volume': getattr(data, 'volume', 0),
+                            'high': getattr(data, 'high', data.close),
+                            'low': getattr(data, 'low', data.close),
+                            'source': data.source
+                        }
+                        self.market_data_buffer.append(data_point)
+                    except Exception as e:
+                        logger.debug(f"Skipping invalid historical record: {e}")
+                        continue
+                
+                logger.info(f"✅ AI Brain loaded {len(self.market_data_buffer)} historical records")
+                logger.info(f"🧠 AI now has substantial market context for intelligent analysis")
+                
+                # Get price range for context
+                if len(self.market_data_buffer) > 0:
+                    prices = [d['close'] for d in self.market_data_buffer if d['close'] is not None and d['close'] > 0]
+                    if prices:
+                        min_price, max_price = min(prices), max(prices)
+                        logger.info(f"📊 Historical price range: ${min_price:.2f} - ${max_price:.2f}")
+            else:
+                logger.warning("⚠️ No historical data available - AI will start with minimal context")
+                
+        except Exception as e:
+            logger.error(f"❌ Error loading historical context: {e}")
+            logger.info("🧠 AI Brain will start with real-time data only")
+    
     async def start(self):
         """Start the AI Brain Service"""
         logger.info("🚀 Starting AI Brain Service...")
         self.running = True
         
+        # Load historical data for AI context
+        await self._load_historical_context()
+        
         # Initialize service references
         self.sierra_client = get_sierra_client()
         self.state_manager = get_state_manager()
+        
+        # Initialize historical data service
+        try:
+            self.historical_service = get_sierra_historical_service()
+            logger.info("✅ Historical data service connected for AI analysis")
+        except Exception as e:
+            logger.warning(f"⚠️ Historical data service unavailable: {e}")
         
         # Subscribe to market data updates
         if hasattr(self.sierra_client, 'add_data_handler'):
@@ -147,21 +216,34 @@ class AIBrainService:
         self.running = False
         logger.info("AI Brain Service stopped")
     
-    async def _on_market_data(self, market_data: MarketData):
+    async def _on_market_data(self, market_data):
         """Handle new market data"""
         try:
-            # Add to analysis buffer
-            data_point = {
-                'timestamp': market_data.timestamp,
-                'symbol': market_data.symbol,
-                'close': market_data.close,
-                'bid': market_data.bid,
-                'ask': market_data.ask,
-                'volume': market_data.volume,
-                'high': getattr(market_data, 'high', market_data.close),
-                'low': getattr(market_data, 'low', market_data.close),
-                'source': market_data.source
-            }
+            # Handle both MarketData objects and dictionaries
+            if isinstance(market_data, dict):
+                data_point = {
+                    'timestamp': market_data.get('timestamp'),
+                    'symbol': market_data.get('symbol'),
+                    'close': market_data.get('close'),
+                    'bid': market_data.get('bid'),
+                    'ask': market_data.get('ask'),
+                    'volume': market_data.get('volume'),
+                    'high': market_data.get('high', market_data.get('close')),
+                    'low': market_data.get('low', market_data.get('close')),
+                    'source': market_data.get('source')
+                }
+            else:
+                data_point = {
+                    'timestamp': market_data.timestamp,
+                    'symbol': market_data.symbol,
+                    'close': market_data.close,
+                    'bid': market_data.bid,
+                    'ask': market_data.ask,
+                    'volume': market_data.volume,
+                    'high': getattr(market_data, 'high', market_data.close),
+                    'low': getattr(market_data, 'low', market_data.close),
+                    'source': market_data.source
+                }
             
             self.market_data_buffer.append(data_point)
             
@@ -187,20 +269,19 @@ class AIBrainService:
                 await asyncio.sleep(30)
     
     async def _perform_analysis(self):
-        """Perform comprehensive market analysis"""
+        """Perform comprehensive market analysis with historical data fallback"""
         try:
-            if not self.market_data_buffer:
+            # Check if we have sufficient real-time data
+            analysis_data = await self._get_analysis_data()
+            if not analysis_data:
                 return
             
-            # Get recent data for analysis
-            recent_data = list(self.market_data_buffer)[-self.analysis_params["trend_period"]:]
-            
             # Perform different types of analysis
-            trend_analysis = await self._analyze_trend(recent_data)
-            momentum_analysis = await self._analyze_momentum(recent_data)
-            volatility_analysis = await self._analyze_volatility(recent_data)
-            volume_analysis = await self._analyze_volume(recent_data)
-            pattern_analysis = await self._analyze_patterns(recent_data)
+            trend_analysis = await self._analyze_trend(analysis_data)
+            momentum_analysis = await self._analyze_momentum(analysis_data)
+            volatility_analysis = await self._analyze_volatility(analysis_data)
+            volume_analysis = await self._analyze_volume(analysis_data)
+            pattern_analysis = await self._analyze_patterns(analysis_data)
             
             # Combine analyses
             combined_analysis = await self._combine_analyses(
@@ -209,7 +290,7 @@ class AIBrainService:
             )
             
             # Generate trading signal
-            signal = await self._generate_signal(combined_analysis, recent_data)
+            signal = await self._generate_signal(combined_analysis, analysis_data)
             
             # Update current state
             self.current_analysis = combined_analysis
@@ -240,13 +321,77 @@ class AIBrainService:
         except Exception as e:
             logger.error(f"❌ Analysis error: {e}")
     
+    async def _get_analysis_data(self) -> List[Dict[str, Any]]:
+        """Get data for analysis - real-time or historical fallback"""
+        try:
+            # First, check if we have sufficient real-time data with volume
+            if self.market_data_buffer:
+                recent_data = list(self.market_data_buffer)[-self.analysis_params["trend_period"]:]
+                
+                # Check if recent data has sufficient volume
+                recent_volumes = [d.get('volume', 0) for d in recent_data if d.get('volume', 0) > 0]
+                avg_recent_volume = sum(recent_volumes) / len(recent_volumes) if recent_volumes else 0
+                
+                # If we have good volume data, use real-time
+                if avg_recent_volume >= self.analysis_params["min_volume_threshold"]:
+                    logger.info(f"📊 Using real-time data (avg volume: {avg_recent_volume:,.0f})")
+                    return recent_data
+                else:
+                    logger.info(f"⚠️ Low real-time volume ({avg_recent_volume:.0f}), falling back to historical data")
+            
+            # Fallback to historical data
+            if self.historical_service:
+                try:
+                    end_date = datetime.utcnow()
+                    start_date = end_date - timedelta(days=self.analysis_params["historical_fallback_days"])
+                    
+                    # Get historical data for NQU25-CME (primary symbol)
+                    historical_records = await self.historical_service.get_historical_data(
+                        'NQU25-CME', start_date, end_date
+                    )
+                    
+                    if historical_records:
+                        # Convert to format expected by analysis methods
+                        historical_data = []
+                        for record in historical_records:
+                            historical_data.append({
+                                'timestamp': record.timestamp,
+                                'open': record.open,
+                                'high': record.high,
+                                'low': record.low,
+                                'close': record.close,
+                                'volume': record.volume
+                            })
+                        
+                        logger.info(f"📈 Using historical data: {len(historical_data)} records, "
+                                  f"avg volume: {sum(d['volume'] for d in historical_data)/len(historical_data):,.0f}")
+                        return historical_data[-self.analysis_params["trend_period"]:]  # Last N periods
+                        
+                except Exception as e:
+                    logger.error(f"❌ Error fetching historical data: {e}")
+            
+            # If no historical service or error, return what we have
+            if self.market_data_buffer:
+                logger.warning("⚠️ Using limited real-time data despite low volume")
+                return list(self.market_data_buffer)[-self.analysis_params["trend_period"]:]
+            
+            logger.warning("❌ No data available for analysis")
+            return []
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting analysis data: {e}")
+            return list(self.market_data_buffer)[-self.analysis_params["trend_period"]:] if self.market_data_buffer else []
+    
     async def _analyze_trend(self, data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze market trend"""
         try:
             if len(data) < 10:
                 return {"direction": "unknown", "strength": 0.0}
             
-            prices = [d['close'] for d in data]
+            prices = [d['close'] for d in data if d['close'] is not None]
+            
+            if not prices:
+                return {"direction": "unknown", "strength": 0.0}
             
             # Simple moving averages
             sma_short = statistics.mean(prices[-10:])
@@ -282,7 +427,10 @@ class AIBrainService:
             if len(data) < self.analysis_params["momentum_period"]:
                 return {"rsi": 50.0, "momentum": "neutral"}
             
-            prices = [d['close'] for d in data]
+            prices = [d['close'] for d in data if d['close'] is not None]
+            
+            if not prices or len(prices) < 2:
+                return {"rsi": 50.0, "momentum": "neutral"}
             
             # Simple RSI calculation
             price_changes = [prices[i] - prices[i-1] for i in range(1, len(prices))]
@@ -330,7 +478,11 @@ class AIBrainService:
             if len(data) < self.analysis_params["volatility_period"]:
                 return {"level": "unknown", "value": 0.0}
             
-            prices = [d['close'] for d in data]
+            prices = [d['close'] for d in data if d['close'] is not None]
+            
+            if not prices or len(prices) < 2:
+                return {"level": "unknown", "value": 0.0}
+            
             returns = [(prices[i] - prices[i-1]) / prices[i-1] for i in range(1, len(prices)) if prices[i-1] != 0]
             
             if not returns:
@@ -464,12 +616,40 @@ class AIBrainService:
             )
     
     async def _generate_signal(self, analysis: MarketAnalysis, data: List[Dict[str, Any]]) -> Optional[TradingSignal]:
-        """Generate trading signal based on analysis"""
+        """Generate trading signal based on analysis - REAL DATA ONLY"""
         try:
             if not analysis or not data:
+                logger.error("🚨 NO REAL DATA - Cannot generate signal without market data")
                 return None
             
             current_price = data[-1]['close']
+            
+            # CRITICAL: Verify we have REAL market data, not cached/fake
+            if current_price is None or current_price <= 0:
+                logger.error("🚨 NO REAL DATA - Invalid price data, refusing to generate signal")
+                return None
+            
+            # Check data freshness - only trade on recent data
+            try:
+                last_timestamp = data[-1].get('timestamp')
+                if last_timestamp:
+                    from datetime import datetime, timedelta
+                    if isinstance(last_timestamp, str):
+                        last_time = datetime.fromisoformat(last_timestamp.replace('Z', '+00:00'))
+                    elif isinstance(last_timestamp, (int, float)):
+                        # Handle Unix timestamp
+                        last_time = datetime.fromtimestamp(last_timestamp)
+                    else:
+                        last_time = last_timestamp
+                    
+                    age_minutes = (datetime.now() - last_time.replace(tzinfo=None)).total_seconds() / 60
+                    if age_minutes > 5:  # Data older than 5 minutes is stale
+                        logger.error(f"🚨 STALE DATA - Market data is {age_minutes:.1f} minutes old, refusing to generate signal")
+                        return None
+            except Exception as e:
+                logger.warning(f"Could not verify data freshness: {e}")
+                # If we can't verify freshness, err on the side of caution
+                return None
             
             # Base signal logic
             signal_type = SignalType.HOLD
@@ -638,11 +818,25 @@ class AIBrainService:
                     "volume_analysis": self.current_analysis.volume_analysis
                 }
             
+            # Add historical context information
+            historical_info = {}
+            if len(self.market_data_buffer) > 0:
+                prices = [d['close'] for d in self.market_data_buffer if d['close'] is not None and d['close'] > 0]
+                if prices:
+                    historical_info = {
+                        "min_price": min(prices),
+                        "max_price": max(prices),
+                        "avg_price": sum(prices) / len(prices),
+                        "historical_range_days": len(self.market_data_buffer),
+                        "has_historical_context": len(self.market_data_buffer) > 20
+                    }
+            
             return {
                 "connected": is_connected,
                 "signal": signal_data,
                 "analysis": analysis_data,
                 "data_points": len(self.market_data_buffer),
+                "historical_context": historical_info,
                 "last_analysis": self.last_analysis_time.isoformat() if self.last_analysis_time else None,
                 "stats": self.stats.copy(),
                 "timestamp": datetime.now().isoformat()
@@ -673,7 +867,10 @@ class PatternDetector:
             if len(data) < 10:
                 return patterns
             
-            prices = [d['close'] for d in data]
+            prices = [d['close'] for d in data if d['close'] is not None]
+            
+            if not prices or len(prices) < 10:
+                return patterns
             
             # Simple breakout detection
             recent_high = max(prices[-10:-1])

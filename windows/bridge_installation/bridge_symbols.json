@@ -1,0 +1,71 @@
+{
+  "version": "3.0.0",
+  "last_updated": "2025-07-25",
+  "synchronized_with_minhos": true,
+  
+  "active_symbols": [
+    "NQU25-CME",
+    "ESU25-CME", 
+    "EURUSD",
+    "XAUUSD",
+    "VIX_CGI"
+  ],
+  
+  "contract_info": {
+    "NQU25-CME": {
+      "base_symbol": "NQ",
+      "current_contract": "NQU25-CME",
+      "next_rollover_date": "2025-09-09",
+      "next_contract": "NQZ25-CME",
+      "exchange": "CME",
+      "asset_type": "futures"
+    },
+    "ESU25-CME": {
+      "base_symbol": "ES", 
+      "current_contract": "ESU25-CME",
+      "next_rollover_date": "2025-09-09",
+      "next_contract": "ESZ25-CME",
+      "exchange": "CME",
+      "asset_type": "futures"
+    },
+    "EURUSD": {
+      "base_symbol": "EURUSD",
+      "current_contract": "EURUSD",
+      "asset_type": "forex"
+    },
+    "XAUUSD": {
+      "base_symbol": "XAUUSD", 
+      "current_contract": "XAUUSD",
+      "asset_type": "forex"
+    },
+    "VIX_CGI": {
+      "base_symbol": "VIX",
+      "current_contract": "VIX_CGI", 
+      "asset_type": "index"
+    }
+  },
+  
+  "rollover_alerts": [
+    {
+      "symbol": "NQU25-CME",
+      "rollover_date": "2025-09-09",
+      "days_until_rollover": 45,
+      "next_symbol": "NQZ25-CME",
+      "action_required": false
+    },
+    {
+      "symbol": "ESU25-CME", 
+      "rollover_date": "2025-09-09",
+      "days_until_rollover": 45,
+      "next_symbol": "ESZ25-CME",
+      "action_required": false
+    }
+  ],
+  
+  "sync_info": {
+    "source": "minhos_symbol_manager",
+    "last_sync": "2025-07-25T11:30:00Z",
+    "sync_method": "manual_update",
+    "notes": "Bridge symbols synchronized with centralized MinhOS symbol management system"
+  }
+}

@@ -19,7 +19,7 @@ echo Current directory: %CD%
 echo.
 
 REM Check if Python is available
-python --version >nul 2>&1
+py --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Python is not installed or not in PATH
     echo Please install Python 3.8+ and ensure it's added to PATH
@@ -29,13 +29,13 @@ if errorlevel 1 (
 )
 
 echo Python version:
-python --version
+py --version
 echo.
 
 REM Check if virtual environment exists
 if not exist "venv" (
     echo Creating Python virtual environment...
-    python -m venv venv
+    py -m venv venv
     if errorlevel 1 (
         echo ERROR: Failed to create virtual environment
         pause
@@ -113,9 +113,33 @@ echo Press Ctrl+C to stop the bridge service
 echo ========================================
 echo.
 
+REM Check if port 8765 is already in use
+echo Checking if port 8765 is available...
+netstat -ano | findstr :8765 >nul 2>&1
+if not errorlevel 1 (
+    echo.
+    echo WARNING: Port 8765 is already in use!
+    echo.
+    echo Processes using port 8765:
+    netstat -ano | findstr :8765
+    echo.
+    echo To kill the process, use: taskkill /PID [process_id] /F
+    echo Or press K to kill all processes using port 8765 automatically
+    echo.
+    choice /c KC /n /m "K - Kill processes using port 8765, C - Continue anyway: "
+    if errorlevel 1 (
+        echo Killing processes using port 8765...
+        for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8765') do (
+            taskkill /PID %%a /F >nul 2>&1
+        )
+        echo Port 8765 should now be available
+        echo.
+    )
+)
+
 REM Start the bridge with enhanced error handling
 :START_BRIDGE
-python bridge.py
+py bridge.py
 set EXIT_CODE=%errorlevel%
 
 echo.

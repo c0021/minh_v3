@@ -159,9 +159,18 @@ class MinhOSCommand:
                     # Get market data
                     market_data = await client.get_market_data()
                     if market_data:
-                        print(f"✅ Market Data: {market_data['symbol']} @ ${market_data['price']}")
-                        print(f"   Bid/Ask: ${market_data['bid']} / ${market_data['ask']}")
-                        print(f"   Volume: {market_data['volume']:,}")
+                        # Bridge returns dictionary of symbols
+                        if isinstance(market_data, dict) and market_data:
+                            total_symbols = len(market_data)
+                            # Show first symbol as primary
+                            first_symbol_key = next(iter(market_data.keys()))
+                            first_symbol_data = market_data[first_symbol_key]
+                            print(f"✅ Market Data: {total_symbols} symbols active")
+                            print(f"   Primary: {first_symbol_data['symbol']} @ ${first_symbol_data['price']}")
+                            print(f"   Bid/Ask: ${first_symbol_data['bid']} / ${first_symbol_data['ask']}")
+                            print(f"   Volume: {first_symbol_data['volume']:,}")
+                        else:
+                            print("⚠️  Market Data: Invalid format")
                     else:
                         print("⚠️  Market Data: Not available")
                 

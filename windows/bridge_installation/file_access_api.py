@@ -48,7 +48,7 @@ class SierraFileAccessAPI:
         self.sierra_data_path = self._find_sierra_data_directory()
         
         # Supported file extensions for historical data
-        self.allowed_extensions = {'.dly', '.scid', '.depth', '.txt', '.csv'}
+        self.allowed_extensions = {'.dly', '.scid', '.depth', '.txt', '.csv', '.json'}
         
         # File type mapping
         self.mime_types = {

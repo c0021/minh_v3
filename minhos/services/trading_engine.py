@@ -221,20 +221,32 @@ class TradingEngine:
         
         logger.info("Trading Engine stopped")
     
-    async def _on_market_data(self, market_data: MarketData):
+    async def _on_market_data(self, market_data):
         """Handle new market data"""
         try:
-            # Add to analysis buffer
-            data_point = {
-                'timestamp': market_data.timestamp,
-                'symbol': market_data.symbol,
-                'close': market_data.close,
-                'bid': market_data.bid,
-                'ask': market_data.ask,
-                'volume': market_data.volume,
-                'high': getattr(market_data, 'high', market_data.close),
-                'low': getattr(market_data, 'low', market_data.close)
-            }
+            # Handle both MarketData objects and dictionaries
+            if isinstance(market_data, dict):
+                data_point = {
+                    'timestamp': market_data.get('timestamp'),
+                    'symbol': market_data.get('symbol'),
+                    'close': market_data.get('close'),
+                    'bid': market_data.get('bid'),
+                    'ask': market_data.get('ask'),
+                    'volume': market_data.get('volume'),
+                    'high': market_data.get('high', market_data.get('close')),
+                    'low': market_data.get('low', market_data.get('close'))
+                }
+            else:
+                data_point = {
+                    'timestamp': market_data.timestamp,
+                    'symbol': market_data.symbol,
+                    'close': market_data.close,
+                    'bid': market_data.bid,
+                    'ask': market_data.ask,
+                    'volume': market_data.volume,
+                    'high': getattr(market_data, 'high', market_data.close),
+                    'low': getattr(market_data, 'low', market_data.close)
+                }
             
             self.market_data_buffer.append(data_point)
             
@@ -570,8 +582,15 @@ class TradingEngine:
             else:
                 execution_strategy = ExecutionStrategy.ADAPTIVE  # Use adaptive execution for regular signals
             
+            # Get primary trading symbol from centralized symbol management
+            from ..core.symbol_integration import get_ai_brain_primary_symbol, get_symbol_integration
+            primary_symbol = get_ai_brain_primary_symbol()
+            
+            # Mark service as migrated to centralized symbol management
+            get_symbol_integration().mark_service_migrated('trading_engine')
+            
             order = TradeOrder(
-                symbol="NQU25-CME",  # Default symbol - should be configurable
+                symbol=primary_symbol,  # Dynamic symbol from centralized management
                 side=side,
                 quantity=position_size,
                 order_type=execution_strategy,
@@ -1148,6 +1167,30 @@ class TradingEngine:
         """Get performance metrics"""
         return self.performance_metrics.copy()
     
+    async def get_positions(self) -> List[Dict[str, Any]]:
+        """Get current trading positions"""
+        if not self.state_manager:
+            return []
+        
+        try:
+            positions = self.state_manager.get_positions()
+            # Convert Position objects to dictionaries
+            return [
+                {
+                    "symbol": pos.symbol,
+                    "quantity": pos.quantity,
+                    "entry_price": pos.entry_price,
+                    "current_price": pos.current_price,
+                    "unrealized_pnl": pos.unrealized_pnl,
+                    "entry_time": pos.entry_time.isoformat() if pos.entry_time else None,
+                    "side": "long" if pos.quantity > 0 else "short" if pos.quantity < 0 else "flat"
+                }
+                for pos in positions
+            ]
+        except Exception as e:
+            logger.error(f"Error getting positions: {e}")
+            return []
+
     def get_engine_status(self) -> Dict[str, Any]:
         """Get comprehensive engine status"""
         return {

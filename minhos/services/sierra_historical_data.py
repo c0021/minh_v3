@@ -17,6 +17,8 @@ import asyncio
 import csv
 import logging
 import struct
+import time
+import random
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Iterator
@@ -56,15 +58,27 @@ class SierraHistoricalDataService:
         self.config = get_config()
         self.market_adapter = get_market_data_adapter()
         
-        # Sierra Chart configuration
-        self.sierra_host = self.config.sierra.host  # "trading-pc" via Tailscale
+        # Sierra Chart configuration  
+        self.sierra_host = "cthinkpad"  # Current bridge host
         self.sierra_data_path = "C:/SierraChart/Data"  # Remote path
         
         # File access via bridge API
         self.bridge_url = f"http://{self.sierra_host}:8765"
         
-        # Supported symbols
-        self.symbols = ["NQU25-CME", "ESU25-CME", "YMU25-CME"]  # Extend as needed
+        # Supported symbols (centralized symbol management)
+        from ..core.symbol_integration import get_historical_data_symbols, get_symbol_integration
+        self.symbols = get_historical_data_symbols()
+        
+        # Mark service as migrated to centralized symbol management  
+        get_symbol_integration().mark_service_migrated('sierra_historical_data')
+        
+        # Fallback symbol mappings for expired contracts
+        self.symbol_fallbacks = {
+            "ESU25-CME": ["NQU25-CME"],  # ES futures fallback to NQ
+            "YMU25-CME": ["NQU25-CME"],  # YM futures fallback to NQ
+            "ESZ25-CME": ["NQU25-CME"],  # Future ES contracts
+            "YMZ25-CME": ["NQU25-CME"],  # Future YM contracts
+        }
         
         # Cache for processed data
         self.data_cache: Dict[str, List[SierraChartRecord]] = {}
@@ -131,7 +145,7 @@ class SierraHistoricalDataService:
             
             for row in csv_reader:
                 try:
-                    # Parse Sierra Chart CSV format
+                    # Parse Sierra Chart CSV format (note: columns have spaces)
                     date_str = row.get('Date', '').strip()
                     record_date = datetime.strptime(date_str, "%Y/%m/%d")
                     
@@ -139,11 +153,11 @@ class SierraHistoricalDataService:
                     if start_date <= record_date <= end_date:
                         record = SierraChartRecord(
                             timestamp=record_date,
-                            open=float(row.get('Open', 0)),
-                            high=float(row.get('High', 0)),
-                            low=float(row.get('Low', 0)),
-                            close=float(row.get('Close', 0)),
-                            volume=int(float(row.get('Volume', 0)))
+                            open=float(row.get('  Open', 0)),    # Note the spaces in column names
+                            high=float(row.get('  High', 0)),
+                            low=float(row.get('  Low', 0)),
+                            close=float(row.get('  Close', 0)),
+                            volume=int(float(row.get('  Volume', 0)))
                         )
                         records.append(record)
                         
@@ -244,35 +258,107 @@ class SierraHistoricalDataService:
         return sierra_epoch + timedelta(microseconds=sc_datetime)
     
     async def _request_file_content(self, filename: str) -> Optional[str]:
-        """Request text file content from Sierra Chart via bridge"""
-        try:
-            # Use bridge API to read file
-            response = await asyncio.get_event_loop().run_in_executor(
-                None, 
-                requests.get, 
-                f"{self.bridge_url}/api/file/read",
-                {"params": {"path": f"{self.sierra_data_path}/{filename}"}}
-            )
-            
-            if response.status_code == 200:
-                return response.text
-            else:
-                logger.warning(f"Failed to read {filename}: {response.status_code}")
-                return None
+        """Request text file content from Sierra Chart via bridge with retry logic"""
+        return await self._request_with_retry(filename, is_binary=False)
+    
+    async def _request_with_retry(self, filename: str, is_binary: bool = False, max_retries: int = 3) -> Optional[str]:
+        """Request file with exponential backoff retry logic"""
+        last_exception = None
+        
+        for attempt in range(max_retries + 1):
+            try:
+                # Calculate backoff delay: 0, 1, 2, 4 seconds (with jitter)
+                if attempt > 0:
+                    base_delay = 2 ** (attempt - 1)
+                    jitter = random.uniform(0.1, 0.3)
+                    delay = base_delay + jitter
+                    logger.info(f"Retry attempt {attempt}/{max_retries} for {filename} after {delay:.1f}s delay")
+                    await asyncio.sleep(delay)
                 
-        except Exception as e:
-            logger.error(f"Error requesting file {filename}: {e}")
-            return None
+                # Make the request
+                import functools
+                endpoint = "/api/file/read_binary" if is_binary else "/api/file/read"
+                get_request = functools.partial(
+                    requests.get,
+                    f"{self.bridge_url}{endpoint}",
+                    params={"path": f"{self.sierra_data_path}/{filename}"},
+                    timeout=30
+                )
+                response = await asyncio.get_event_loop().run_in_executor(None, get_request)
+                
+                if response.status_code == 200:
+                    data = response.content if is_binary else response.text
+                    size_info = f"{len(data)} bytes" if is_binary else f"{len(data)} chars"
+                    logger.info(f"Successfully read {filename} on attempt {attempt + 1}: {size_info}")
+                    return data
+                elif response.status_code == 404:
+                    # Don't retry 404s - try fallback immediately
+                    if not is_binary and attempt == 0:  # Only try fallback on first attempt
+                        logger.warning(f"File not found: {filename} (404) - checking fallbacks")
+                        return await self._try_fallback_symbol(filename)
+                    else:
+                        logger.error(f"File not found: {filename} (404) - no fallbacks available")
+                        return None
+                else:
+                    logger.warning(f"Attempt {attempt + 1} failed for {filename}: HTTP {response.status_code}")
+                    if attempt == max_retries:  # Last attempt
+                        logger.error(f"All retry attempts failed for {filename}: HTTP {response.status_code} - {response.text}")
+                        return None
+                    
+            except Exception as e:
+                last_exception = e
+                logger.warning(f"Attempt {attempt + 1} error for {filename}: {e}")
+                if attempt == max_retries:  # Last attempt
+                    logger.error(f"All retry attempts failed for {filename}: {last_exception}")
+                    return None
+        
+        return None
+    
+    async def _try_fallback_symbol(self, filename: str) -> Optional[str]:
+        """Try fallback symbols when primary symbol file is not found"""
+        # Extract symbol from filename (remove .dly extension)
+        symbol = filename.replace('.dly', '')
+        
+        if symbol in self.symbol_fallbacks:
+            logger.info(f"Trying fallback symbols for {symbol}: {self.symbol_fallbacks[symbol]}")
+            
+            for fallback_symbol in self.symbol_fallbacks[symbol]:
+                fallback_filename = f"{fallback_symbol}.dly"
+                logger.info(f"Attempting fallback: {filename} -> {fallback_filename}")
+                
+                try:
+                    import functools
+                    get_request = functools.partial(
+                        requests.get,
+                        f"{self.bridge_url}/api/file/read",
+                        params={"path": f"{self.sierra_data_path}/{fallback_filename}"},
+                        timeout=30
+                    )
+                    response = await asyncio.get_event_loop().run_in_executor(None, get_request)
+                    
+                    if response.status_code == 200:
+                        logger.info(f"Fallback successful: {filename} -> {fallback_filename}")
+                        return response.text
+                    else:
+                        logger.warning(f"Fallback failed for {fallback_filename}: {response.status_code}")
+                        
+                except Exception as e:
+                    logger.error(f"Error in fallback request for {fallback_filename}: {e}")
+                    
+        logger.error(f"All fallback options exhausted for {filename}")
+        return None
     
     async def _request_binary_file(self, filename: str) -> Optional[bytes]:
         """Request binary file content from Sierra Chart via bridge"""
         try:
-            response = await asyncio.get_event_loop().run_in_executor(
-                None,
+            import functools
+            get_request = functools.partial(
                 requests.get,
-                f"{self.bridge_url}/api/file/read_binary",
-                {"params": {"path": f"{self.sierra_data_path}/{filename}"}}
+                f"{self.bridge_url}/api/file/read_binary", 
+                params={"path": f"{self.sierra_data_path}/{filename}"},
+                timeout=30
             )
+            response = await asyncio.get_event_loop().run_in_executor(None, get_request)
             
             if response.status_code == 200:
                 return response.content
@@ -286,13 +372,10 @@ class SierraHistoricalDataService:
     
     def _convert_symbol_to_sierra_format(self, symbol: str) -> str:
         """Convert MinhOS symbol format to Sierra Chart format"""
-        # Example: "NQU25-CME" -> "NQ 03-25" (needs mapping logic)
-        symbol_map = {
-            "NQU25-CME": "NQ 03-25",  # March 2025
-            "ESU25-CME": "ES 03-25",  # March 2025  
-            "YMU25-CME": "YM 03-25"   # March 2025
-        }
-        return symbol_map.get(symbol, symbol)
+        # Based on actual Sierra Chart file investigation:
+        # Files use exact format: NQU25-CME.dly, ESU25-CME.dly, etc.
+        # No conversion needed - use symbol as-is for file names
+        return symbol
     
     async def _perform_initial_backfill(self):
         """Perform initial backfill of missing historical data"""
@@ -323,7 +406,7 @@ class SierraHistoricalDataService:
         
         try:
             # Get existing data range from MinhOS database
-            existing_data = await self.market_adapter.get_historical_range(symbol)
+            existing_data = self.market_adapter.get_historical_range(symbol)
             
             if not existing_data:
                 # No existing data - need full historical backfill
@@ -354,9 +437,12 @@ class SierraHistoricalDataService:
             
             # Convert to MinhOS MarketData format and store
             for record in historical_records:
+                # Convert datetime to timestamp for MarketData
+                timestamp_float = record.timestamp.timestamp() if hasattr(record.timestamp, 'timestamp') else float(record.timestamp)
+                
                 market_data = MarketData(
                     symbol=symbol,
-                    timestamp=record.timestamp,
+                    timestamp=timestamp_float,
                     close=record.close,
                     bid=record.low,  # Approximate
                     ask=record.high,  # Approximate

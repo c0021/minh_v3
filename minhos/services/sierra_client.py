@@ -112,12 +112,12 @@ class SierraClient(BaseService):
         # Trading
         self.pending_trades: Dict[str, TradeCommand] = {}
         
-        # Multi-chart symbols (configured for your setup)
-        self.symbols = {
-            'NQU25-CME': {'timeframes': ['1min', '30min', 'daily'], 'primary': True},
-            'ESU25-CME': {'timeframes': ['1min'], 'primary': False},
-            'VIX': {'timeframes': ['1min'], 'primary': False}
-        }
+        # Multi-chart symbols (centralized symbol management)
+        from ..core.symbol_integration import get_sierra_client_symbols, get_symbol_integration
+        self.symbols = get_sierra_client_symbols()
+        
+        # Mark service as migrated to centralized symbol management
+        get_symbol_integration().mark_service_migrated('sierra_client')
         
         logger.info(f"Sierra Client initialized - Bridge: {self.bridge_url}")
     
@@ -326,9 +326,30 @@ class SierraClient(BaseService):
             return None
     
     async def _verify_connection(self) -> bool:
-        """Verify bridge connection is still active"""
+        """Verify bridge connection is still active AND actually providing data"""
+        # First check basic health
         health = await self._check_bridge_health()
-        return health is not None and health.get('status') == 'healthy'
+        if not health or health.get('status') != 'healthy':
+            return False
+        
+        # More importantly - check if we're actually getting market data
+        try:
+            # Test if we can get actual market data (not just health ping)
+            async with self.session.get(f"{self.bridge_url}/api/data/NQU25-CME", timeout=5) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    # Verify we got real data, not empty/cached
+                    if data.get('price', 0) > 0 and data.get('timestamp'):
+                        return True
+                    else:
+                        logger.warning("Bridge responding but no real market data (price=0 or no timestamp)")
+                        return False
+                else:
+                    logger.warning(f"Bridge health OK but market data endpoint failed: {resp.status}")
+                    return False
+        except Exception as e:
+            logger.warning(f"Bridge health OK but market data fetch failed: {e}")
+            return False
     
     async def _market_data_streamer(self):
         """Stream market data from bridge and relay to MinhOS services"""
@@ -339,17 +360,17 @@ class SierraClient(BaseService):
                 logger.debug(f"Market data streaming loop - Connection state: {self.connection_state}")
                 
                 if self.connection_state == ConnectionState.CONNECTED:
-                    # Get latest market data for primary symbol
-                    logger.debug("Fetching market data from bridge...")
-                    market_data = await self.get_market_data()
+                    # Get market data for all symbols
+                    logger.debug("Fetching all market data from bridge...")
+                    all_market_data = await self.get_all_market_data()
                     
-                    if market_data:
-                        logger.debug(f"🔄 Streaming: {market_data.symbol} @ ${market_data.close}")
-                        # Store and broadcast to subscribers
-                        self.last_market_data[market_data.symbol] = market_data
-                        logger.debug("🎯 About to call _broadcast_market_data...")
-                        await self._broadcast_market_data(market_data)
-                        logger.debug("🎯 _broadcast_market_data completed")
+                    if all_market_data:
+                        logger.info(f"🔄 Streaming {len(all_market_data)} symbols")
+                        # Store and broadcast each symbol
+                        for symbol, market_data in all_market_data.items():
+                            logger.debug(f"📊 {symbol} @ ${market_data.close}")
+                            self.last_market_data[symbol] = market_data
+                            await self._broadcast_market_data(market_data)
                     else:
                         logger.debug("No market data received from bridge")
                 else:
@@ -373,7 +394,15 @@ class SierraClient(BaseService):
             async with self.session.get(f"{self.bridge_url}/api/market_data", timeout=5) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    return MarketData.from_sierra_data(data)
+                    # Bridge returns dictionary of symbols
+                    if isinstance(data, dict) and data:
+                        # If specific symbol requested, return that one
+                        if symbol and symbol in data:
+                            return MarketData.from_sierra_data(data[symbol])
+                        # Otherwise return the first available symbol (primary)
+                        first_symbol = next(iter(data.keys()))
+                        return MarketData.from_sierra_data(data[first_symbol])
+                    return None
                 elif resp.status == 404:
                     logger.debug("No market data available from Sierra Chart")
                     return None
@@ -383,6 +412,29 @@ class SierraClient(BaseService):
         except Exception as e:
             logger.error(f"Market data fetch error: {e}")
             return None
+    
+    async def get_all_market_data(self) -> Dict[str, MarketData]:
+        """Get market data for all symbols from bridge"""
+        if self.connection_state != ConnectionState.CONNECTED:
+            return {}
+        
+        try:
+            async with self.session.get(f"{self.bridge_url}/api/market_data", timeout=5) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    # Convert all symbols to MarketData objects
+                    result = {}
+                    for symbol, symbol_data in data.items():
+                        try:
+                            result[symbol] = MarketData.from_sierra_data(symbol_data)
+                        except Exception as e:
+                            logger.error(f"Failed to parse market data for {symbol}: {e}")
+                    return result
+                else:
+                    return {}
+        except Exception as e:
+            logger.error(f"Market data fetch error: {e}")
+            return {}
     
     async def execute_trade(self, trade_command: TradeCommand) -> Optional[TradeResult]:
         """Execute trade via bridge"""

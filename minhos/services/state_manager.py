@@ -368,15 +368,33 @@ class StateManager:
     async def _on_market_data_update(self, data):
         """Handle market data updates from unified store"""
         try:
+            # Handle both MarketData objects and dictionaries
+            if isinstance(data, dict):
+                symbol = data.get('symbol')
+                close = data.get('close')
+                bid = data.get('bid')
+                ask = data.get('ask')
+                volume = data.get('volume')
+                timestamp = data.get('timestamp')
+                source = data.get('source', 'unified_store')
+            else:
+                symbol = data.symbol
+                close = data.close
+                bid = data.bid
+                ask = data.ask
+                volume = data.volume
+                timestamp = data.timestamp
+                source = data.source or "unified_store"
+            
             # Convert MarketData to MarketDataPoint for compatibility
             market_data = MarketDataPoint(
-                symbol=data.symbol,
-                close=data.close,
-                bid=data.bid,
-                ask=data.ask,
-                volume=data.volume,
-                timestamp=datetime.fromtimestamp(data.timestamp).isoformat() if data.timestamp else "",
-                source=data.source or "unified_store",
+                symbol=symbol,
+                close=close,
+                bid=bid,
+                ask=ask,
+                volume=volume,
+                timestamp=datetime.fromtimestamp(timestamp).isoformat() if timestamp else "",
+                source=source,
                 received_at=datetime.now().isoformat()
             )
             

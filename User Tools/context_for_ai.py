@@ -1769,7 +1769,8 @@ Intelligence Layer:
                 print(f"✅ Enhanced AI context saved to {filename}")
                 print(f"📊 Context Statistics:")
                 print(f"   - Size: {len(context):,} characters")
-                print(f"   - Lines: {context.count('\\n'):,}")
+                newline_count = context.count('\n')
+                print(f"   - Lines: {newline_count:,}")
                 print(f"   - Focus Area: {focus_area}")
                 print(f"   - Issues Detected: {len(self.detected_issues)}")
                 

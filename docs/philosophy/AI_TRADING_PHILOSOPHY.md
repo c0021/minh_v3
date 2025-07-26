@@ -18,6 +18,27 @@ MinhOS v3 is built on the fundamental belief that **success comes from making th
 
 **Our approach**: Focus on what we can control - the quality of our analysis, consistency of execution, learning from results, and continuous improvement of our decision-making process. Success is measured by the excellence of our decisions, not by comparison to others.
 
+## ⚡ **ABSOLUTE NO FAKE DATA PRINCIPLE** - CORE FOUNDATION
+
+**CRITICAL SYSTEM REQUIREMENT**: MinhOS operates exclusively with REAL market data.
+
+### **Forbidden Practices:**
+- **NO synthetic data** - Ever. Period. Full stop.
+- **NO mock data** - All data must be authentic market-sourced
+- **NO paper trading** - Only live trading with real capital
+- **NO simulations** - Only actual market conditions and responses  
+- **NO backtesting with fake data** - Historical analysis uses only genuine Sierra Chart archives
+- **NO artificial gaps or test data** - System must work with reality only
+
+### **Why This Principle is Non-Negotiable:**
+1. **Integrity of Decision Making**: Fake data corrupts AI learning and decision quality
+2. **System Authenticity**: Only real market conditions test our actual capabilities
+3. **Resource Constraints**: We don't have luxury of perfect data - must work with reality
+4. **Risk Management**: Real trading requires real data discipline
+5. **Philosophy Alignment**: We succeed by making best decisions with available information
+
+**Violation of this principle corrupts the entire system's integrity and violates our commitment to reality-based decision making.**
+
 ## 1. Primary Principle: Human-AI Partnership for Optimal Decision-Making
 
 ### The Core Belief

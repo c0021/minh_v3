@@ -28,7 +28,6 @@ windows/
 │   ├── start_bridge.bat        # Windows startup script
 │   └── start_bridge.ps1        # PowerShell startup script
 │
-├── create_portable_bridge.py    # Create portable installation package
 ├── test_file_api.bat           # Test file access API
 ├── test_file_api.ps1           # Test file access API (PowerShell)
 └── switch to new host/         # Host reconfiguration guides
@@ -50,9 +49,6 @@ This contains complete:
 - `test_file_api.bat` - Quick batch test of file access API
 - `test_file_api.ps1` - Comprehensive PowerShell test suite
 
-### Deployment
-- `create_portable_bridge.py` - Creates portable ZIP package for deployment
-
 ### Configuration
 - `switch to new host/` - Guides for reconfiguring bridge for different machines
 
@@ -64,9 +60,6 @@ cd bridge_installation && start_bridge.bat
 
 # Test file access API
 test_file_api.bat
-
-# Create portable package
-python create_portable_bridge.py
 ```
 
 ---

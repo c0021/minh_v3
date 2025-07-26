@@ -1,0 +1,24 @@
+[
+  {
+    "timestamp": "2025-07-24T11:35:49.734224",
+    "config_hash": "5000182dc7829bee4b583ac3680c67da",
+    "config_files": {
+      "requirements.txt": {
+        "content_hash": 3410944648151052321,
+        "size": 893,
+        "last_modified": "2025-07-22T10:47:10.638665"
+      }
+    },
+    "environment_vars": {
+      "PATH": "/home/colindo/Sync/minh_v3/venv/bin:/home/colindo/.npm-global/bin:/home/colindo/.local/bin:/home/colindo/bin:/home/colindo/.npm-global/bin:/home/colindo/.cargo/bin:/home/colindo/.local/bin:/home/colindo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/usr/local/go/bin:/usr/local/go/bin:/usr/local/go/bin:/usr/local/go/bin:/home/colindo/.vscode/extensions/ms-python.debugpy-2025.10.0-linux-x64/bundled/scripts/noConfigScripts",
+      "PYTHONPATH": "NOT_SET",
+      "HOME": "/home/colindo",
+      "USER": "colindo"
+    },
+    "system_info": {
+      "platform": "Linux-6.12.10-76061203-generic-x86_64-with-glibc2.35",
+      "python_version": "3.10.12",
+      "architecture": "64bit"
+    }
+  }
+]

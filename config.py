@@ -7,13 +7,15 @@ import os
 from pathlib import Path
 
 # Bridge Configuration
-# Replace with your Windows laptop's Tailscale hostname or IP
-BRIDGE_HOSTNAME = os.getenv("BRIDGE_HOSTNAME", "cthinkpad")
+# Updated to use Windows host IP from WSL (172.21.128.1)
+BRIDGE_HOSTNAME = os.getenv("BRIDGE_HOSTNAME", "172.21.128.1")
 BRIDGE_PORT = int(os.getenv("BRIDGE_PORT", "8765"))
 BRIDGE_URL = f"http://{BRIDGE_HOSTNAME}:{BRIDGE_PORT}"
 
 # Alternative IPs if hostname doesn't work
 BRIDGE_IPS = [
+    "172.21.128.1",  # Windows host IP from WSL (current working)
+    "cthinkpad",     # Original hostname (fallback)
     "100.64.0.1",    # Example Tailscale IP - replace with actual
     "192.168.1.100", # Example local IP - replace with actual
 ]

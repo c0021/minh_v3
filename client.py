@@ -102,7 +102,8 @@ async def main():
     
     # Configure your Windows bridge URL here
     # Use your Tailscale hostname or IP
-    BRIDGE_URL = "http://cthinkpad:8765"
+    import os
+    BRIDGE_URL = f"http://{os.getenv('BRIDGE_HOSTNAME', '172.21.128.1')}:8765"
     
     async with MinhOSClient(BRIDGE_URL) as client:
         # Check health

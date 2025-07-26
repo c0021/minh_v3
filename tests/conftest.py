@@ -9,7 +9,7 @@ import asyncio
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+# Mock imports removed - MinhOS philosophy: NO FAKE DATA
 from typing import AsyncGenerator, Generator
 
 import pytest
@@ -45,50 +45,8 @@ def config():
         config.ensure_directories()
         yield config
 
-@pytest.fixture
-async def mock_sierra_client():
-    """Mock Sierra Chart client"""
-    client = MagicMock()
-    client.is_connected = True
-    client.connect = AsyncMock(return_value=True)
-    client.disconnect = AsyncMock()
-    client.get_market_data = AsyncMock(return_value={
-        "timestamp": "2024-01-01T12:00:00",
-        "symbol": "NQ",
-        "price": 15000.0,
-        "volume": 100,
-        "bid": 14999.5,
-        "ask": 15000.5
-    })
-    client.execute_trade = AsyncMock(return_value={"status": "submitted", "command_id": "test123"})
-    client.get_stats = MagicMock(return_value={
-        "status": "connected",
-        "total_messages": 100,
-        "failed_requests": 0,
-        "latency_ms": 10.5
-    })
-    
-    yield client
+# Mock fixtures removed - MinhOS philosophy: NO FAKE DATA
+# Tests must use real Sierra Chart connections or be skipped
 
-@pytest.fixture
-def sample_market_data():
-    """Sample market data for tests"""
-    return {
-        "timestamp": "2024-01-01T12:00:00",
-        "symbol": "NQ",
-        "price": 15000.0,
-        "volume": 100,
-        "bid": 14999.5,
-        "ask": 15000.5
-    }
-
-@pytest.fixture
-def sample_trade_data():
-    """Sample trade data for tests"""
-    return {
-        "action": "BUY",
-        "symbol": "NQ",
-        "quantity": 1,
-        "price": 15000.0,
-        "order_type": "LIMIT"
-    }
+# Sample data fixtures removed - MinhOS philosophy: NO FAKE DATA
+# Tests must use real market data from Sierra Chart or be skipped

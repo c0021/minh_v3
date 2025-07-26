@@ -47,16 +47,8 @@ def test_sierra_client_import():
     assert client.port > 0
 
 
-@pytest.mark.asyncio
-async def test_sierra_client_mock(mock_sierra_client):
-    """Test Sierra client with mocking"""
-    assert await mock_sierra_client.connect()
-    
-    market_data = await mock_sierra_client.get_market_data()
-    assert market_data["price"] > 0
-    
-    trade_result = await mock_sierra_client.execute_trade("BUY", "NQ", 1)
-    assert trade_result["status"] == "submitted"
+# Mock Sierra client test removed - MinhOS philosophy: NO FAKE DATA
+# Tests must use real Sierra Chart connections or be skipped
 
 
 def test_bridge_files_exist():
