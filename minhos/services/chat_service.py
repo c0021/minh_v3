@@ -13,6 +13,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from ..core.base_service import BaseService
 from ..core.nlp_provider import get_nlp_manager, ParsedIntent, NLPResponse
 from ..core.config import get_config
+from .smart_suggestion_engine import get_smart_suggestion_engine, SuggestionContext
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,127 @@ class ConversationContext:
         context["recent_indicators"] = list(set(context["recent_indicators"]))[-3:]
         
         return context
+    
+    async def get_smart_suggestions(self, client_id: str, partial_command: str = "") -> Dict[str, Any]:
+        """Get smart command suggestions based on current context"""
+        try:
+            # Build current context for suggestions
+            context = await self._build_suggestion_context(client_id)
+            
+            # Get suggestions from the engine
+            suggestions = await self.suggestion_engine.get_smart_suggestions(
+                partial_command, context, max_suggestions=5
+            )
+            
+            # Convert to response format
+            suggestion_data = {
+                "suggestions": [s.to_dict() for s in suggestions],
+                "context_summary": {
+                    "market_price": context.market_price,
+                    "price_change": context.price_change,
+                    "ml_confidence": context.ml_confidence,
+                    "session_duration": context.session_duration
+                },
+                "partial_command": partial_command,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+            return suggestion_data
+            
+        except Exception as e:
+            self.logger.error(f"Error getting smart suggestions: {e}")
+            return {"suggestions": [], "error": str(e)}
+    
+    async def _build_suggestion_context(self, client_id: str) -> SuggestionContext:
+        """Build suggestion context from current system state"""
+        try:
+            # Get market data
+            market_price = 23500.0  # Default
+            price_change = 0.0
+            volume_trend = "normal"
+            volatility_level = "normal"
+            
+            # Get ML data
+            ml_signal = None
+            ml_confidence = 0.0
+            
+            # Get position data  
+            current_positions = 0
+            account_exposure = 0.0
+            
+            # Get conversation context
+            recent_commands = []
+            session_duration = 0
+            
+            if client_id in self.conversation_contexts:
+                conv_context = self.conversation_contexts[client_id]
+                session_duration = int((datetime.utcnow() - conv_context.session_start).total_seconds() / 60)
+                
+                # Extract recent commands from conversation
+                recent_messages = conv_context.get_recent_context(10)
+                for msg in recent_messages:
+                    if msg.get("type") == "user":
+                        recent_commands.append(msg.get("content", ""))
+            
+            # Try to get real market data
+            try:
+                if self.sierra_client and hasattr(self.sierra_client, 'last_market_data'):
+                    from ..core.symbol_integration import get_ai_brain_primary_symbol
+                    primary_symbol = get_ai_brain_primary_symbol()
+                    
+                    if primary_symbol in self.sierra_client.last_market_data:
+                        data = self.sierra_client.last_market_data[primary_symbol]
+                        market_price = data.close
+                        # Calculate price change from previous data if available
+                        
+            except Exception as e:
+                self.logger.debug(f"Could not get real market data: {e}")
+            
+            # Try to get ML data
+            try:
+                if self.ai_brain_service and hasattr(self.ai_brain_service, 'ml_capabilities'):
+                    # Check recent analysis for ML confidence
+                    if hasattr(self.ai_brain_service, 'analysis_history') and self.ai_brain_service.analysis_history:
+                        recent_analysis = list(self.ai_brain_service.analysis_history)[-1]
+                        if recent_analysis.get('signal') and recent_analysis['signal'].get('confidence'):
+                            ml_confidence = recent_analysis['signal']['confidence']
+                            if recent_analysis['signal'].get('signal', {}).get('name'):
+                                ml_signal = recent_analysis['signal']['signal']['name']
+                                
+            except Exception as e:
+                self.logger.debug(f"Could not get ML data: {e}")
+            
+            # Try to get position data
+            try:
+                if self.trading_engine and hasattr(self.trading_engine, 'get_status'):
+                    status = self.trading_engine.get_status()
+                    current_positions = len(status.get('positions', []))
+                    
+            except Exception as e:
+                self.logger.debug(f"Could not get position data: {e}")
+            
+            return SuggestionContext(
+                market_price=market_price,
+                price_change=price_change,
+                volume_trend=volume_trend,
+                volatility_level=volatility_level,
+                ml_signal=ml_signal,
+                ml_confidence=ml_confidence,
+                current_positions=current_positions,
+                account_exposure=account_exposure,
+                recent_commands=recent_commands[-5:],  # Last 5 commands
+                session_duration=session_duration
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Error building suggestion context: {e}")
+            # Return default context
+            return SuggestionContext(
+                market_price=23500.0,
+                price_change=0.0,
+                volume_trend="normal", 
+                volatility_level="normal"
+            )
 
 class ChatService(BaseService):
     """Service for handling natural language chat interactions."""
@@ -90,6 +212,7 @@ class ChatService(BaseService):
         super().__init__("chat_service")
         self.nlp_manager = get_nlp_manager()
         self.config = get_config()
+        self.suggestion_engine = get_smart_suggestion_engine()
         
         # Active WebSocket connections
         self.active_connections: Dict[str, WebSocket] = {}
@@ -201,8 +324,11 @@ class ChatService(BaseService):
             self.logger.error(f"Error handling chat message: {e}")
             self.stats["failed_queries"] += 1
             
+            # Provide more helpful error messages
+            error_content = self._get_helpful_error_message(str(e), message)
+            
             error_msg = ChatMessage(
-                content="I encountered an error processing your request. Please try rephrasing or ask about something else.",
+                content=error_content,
                 message_type="error",
                 metadata={"error": str(e)}
             )
@@ -352,6 +478,68 @@ class ChatService(BaseService):
             data["error"] = f"Unable to fetch system information: {str(e)}"
         
         return data
+    
+    def _get_helpful_error_message(self, error_str: str, user_message: str) -> str:
+        """Generate helpful error messages based on the error type."""
+        error_lower = error_str.lower()
+        user_lower = user_message.lower()
+        
+        # NLP provider errors
+        if "no nlp providers" in error_lower or "nollavailableprovider" in error_lower:
+            return """I'm currently running in offline mode. I can still help you with:
+• "Show me current market overview"
+• "What's the AI signal confidence right now?"  
+• "Explain the latest decision quality score"
+• "How is the system performing today?"
+
+For advanced chat features, please configure an API key in the system settings."""
+        
+        # Service connection errors
+        if "connection" in error_lower or "timeout" in error_lower:
+            return """I'm having trouble connecting to system services. Please check that:
+• All MinhOS services are running
+• Sierra Chart bridge is connected
+• Market data is flowing
+
+Try asking: "What's the system status?" """
+        
+        # Data errors
+        if "data" in error_lower or "unavailable" in error_lower:
+            if any(word in user_lower for word in ['market', 'price', 'symbol']):
+                return """Market data is currently unavailable. Please ensure:
+• Sierra Chart is running and connected
+• The Windows bridge is active
+• Data subscriptions are working
+
+Try: "What's the system status?" or wait a moment and try again."""
+            else:
+                return "The requested data is currently unavailable. Please try again in a moment or ask about system status."
+        
+        # API/external service errors
+        if "api" in error_lower or "key" in error_lower:
+            return """External services are unavailable, but I can still help with local system queries:
+• Current market data and prices
+• AI analysis and signals  
+• System status and health
+• Decision quality metrics"""
+        
+        # General fallback
+        return f"""I encountered an error processing your request. Here are some things you can try:
+
+**System Status:**
+• "What's the system status?"
+• "Show me current market overview"
+
+**AI Analysis:**  
+• "What's the AI signal confidence?"
+• "Explain the latest AI decision"
+
+**Troubleshooting:**
+• Check that all MinhOS services are running
+• Verify Sierra Chart connection
+• Try rephrasing your question
+
+Please try again or ask about something else."""
     
     async def _send_message(self, client_id: str, message: ChatMessage):
         """Send message to specific client."""

@@ -1,0 +1,96 @@
+{
+  "timestamp": "2025-07-28T13:22:08.471131",
+  "config": {
+    "base_models": [
+      "xgboost",
+      "lightgbm",
+      "random_forest",
+      "catboost"
+    ],
+    "meta_learner": "linear",
+    "stacking_enabled": true,
+    "agreement_threshold": 0.7,
+    "confidence_threshold": 0.6,
+    "n_estimators": 100,
+    "max_depth": 6,
+    "learning_rate": 0.1
+  },
+  "feature_names": [
+    "price_change_1",
+    "price_change_5",
+    "price_volatility",
+    "price_ma_ratio",
+    "rsi",
+    "macd",
+    "bollinger_position",
+    "volume_ma",
+    "volume_ratio",
+    "volume_change",
+    "momentum_5",
+    "momentum_10",
+    "hour",
+    "day_of_week",
+    "is_market_hours",
+    "hl_ratio",
+    "close_position",
+    "price_lag_1",
+    "price_lag_2",
+    "price_lag_3"
+  ],
+  "model_weights": {
+    "xgboost": 0.19709337049571968,
+    "lightgbm": 0.20266772844913397,
+    "random_forest": 0.20306589687437784,
+    "catboost": 0.2022695600238901,
+    "meta_learner": 0.19490344415687835
+  },
+  "model_performance": {
+    "xgboost": {
+      "direction_accuracy": 0.49107142857142855,
+      "mse": 7.464971083083736e-05,
+      "mae": 0.006910690373509912
+    },
+    "lightgbm": {
+      "direction_accuracy": 0.5049603174603174,
+      "mse": 7.382463748157486e-05,
+      "mae": 0.006857308746155066
+    },
+    "random_forest": {
+      "direction_accuracy": 0.5059523809523809,
+      "mse": 7.077128891065357e-05,
+      "mae": 0.006723438496636905
+    },
+    "catboost": {
+      "direction_accuracy": 0.503968253968254,
+      "mse": 7.123009587081416e-05,
+      "mae": 0.006748288242532217
+    },
+    "meta_learner": {
+      "direction_accuracy": 0.48561507936507936,
+      "mse": 9.438480649589663e-05,
+      "mae": 0.007717587616143963
+    }
+  },
+  "feature_importance": {
+    "price_change_1": 26.647956570581844,
+    "price_change_5": 32.35515199658966,
+    "price_volatility": 43.56340760544123,
+    "price_ma_ratio": 31.906002722700013,
+    "rsi": 42.777234167328565,
+    "macd": 42.54971188534436,
+    "bollinger_position": 22.910255252997487,
+    "volume_ma": 42.13995935666947,
+    "volume_ratio": 37.9076696347146,
+    "volume_change": 40.470226844160074,
+    "momentum_5": 0.964457178806807,
+    "momentum_10": 31.98184931563012,
+    "hour": 24.183154776937112,
+    "day_of_week": 11.273029590156698,
+    "is_market_hours": 3.9821228109627027,
+    "hl_ratio": 42.922886929837006,
+    "close_position": 46.08191013892419,
+    "price_lag_1": 14.73900039868877,
+    "price_lag_2": 39.28877783605387,
+    "price_lag_3": 35.77462171138421
+  }
+}

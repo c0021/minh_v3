@@ -26,6 +26,53 @@ import mimetypes
 
 logger = logging.getLogger(__name__)
 
+# File cache for the file access API to prevent crashes
+class APIFileCache:
+    """File cache specifically for API endpoints"""
+    def __init__(self, ttl=2):
+        self.cache = {}
+        self.lock = __import__('threading').RLock()
+        self.ttl = ttl
+        self.hits = 0
+        self.misses = 0
+    
+    def get_cached_file(self, path, mode='r', encoding='utf-8'):
+        cache_key = f"{path}_{mode}_{encoding}"
+        with self.lock:
+            now = __import__('time').time()
+            if cache_key in self.cache:
+                content, timestamp = self.cache[cache_key]
+                if now - timestamp < self.ttl:
+                    self.hits += 1
+                    return content
+            
+            # Cache miss - read file
+            try:
+                if mode == 'rb':
+                    with open(path, 'rb') as f:
+                        content = f.read()
+                else:
+                    with open(path, 'r', encoding=encoding) as f:
+                        content = f.read()
+                
+                self.cache[cache_key] = (content, now)
+                self.misses += 1
+                return content
+            except Exception as e:
+                logger.error(f"APIFileCache error reading {path}: {e}")
+                raise e
+    
+    def get_stats(self):
+        return {
+            'hits': self.hits,
+            'misses': self.misses,
+            'hit_rate': self.hits / (self.hits + self.misses) if (self.hits + self.misses) > 0 else 0,
+            'cached_files': len(self.cache)
+        }
+
+# Global API file cache
+api_file_cache = APIFileCache(ttl=2)  # 2-second cache for API calls
+
 class SierraFileAccessAPI:
     """
     Secure file access API for Sierra Chart data files.
@@ -48,7 +95,7 @@ class SierraFileAccessAPI:
         self.sierra_data_path = self._find_sierra_data_directory()
         
         # Supported file extensions for historical data
-        self.allowed_extensions = {'.dly', '.scid', '.depth', '.txt', '.csv'}
+        self.allowed_extensions = {'.dly', '.scid', '.depth', '.txt', '.csv', '.json'}
         
         # File type mapping
         self.mime_types = {
@@ -223,8 +270,7 @@ class SierraFileAccessAPI:
             
             # Read file content
             try:
-                with open(validated_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
+                content = api_file_cache.get_cached_file(validated_path, 'r', 'utf-8')
                 
                 logger.info(f"Read text file: {validated_path} - {len(content)} characters")
                 
@@ -235,8 +281,7 @@ class SierraFileAccessAPI:
             except UnicodeDecodeError:
                 # Try with different encoding
                 try:
-                    with open(validated_path, 'r', encoding='latin1') as f:
-                        content = f.read()
+                    content = api_file_cache.get_cached_file(validated_path, 'r', 'latin1')
                     
                     logger.info(f"Read text file with latin1 encoding: {validated_path}")
                     return PlainTextResponse(content=content, media_type='text/plain')
@@ -278,8 +323,7 @@ class SierraFileAccessAPI:
             
             # Read binary content
             try:
-                with open(validated_path, 'rb') as f:
-                    content = f.read()
+                content = api_file_cache.get_cached_file(validated_path, 'rb')
                 
                 logger.info(f"Read binary file: {validated_path} - {len(content)} bytes")
                 

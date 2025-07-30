@@ -21,6 +21,7 @@ import time
 # Import other services
 from .sierra_client import get_sierra_client
 from .market_data import get_market_data_service
+from ..core.symbol_integration import SymbolIntegration
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +39,11 @@ class WebAPIService:
         self.app = web.Application()
         self.runner = None
         self.site = None
+        
+        # Centralized symbol management
+        self.symbol_integration = SymbolIntegration()
+        self.api_symbols = self.symbol_integration.get_web_api_symbols()
+        self.symbol_integration.mark_service_migrated('web_api')
         self.running = False
         
         # Service references

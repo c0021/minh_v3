@@ -1,0 +1,119 @@
+{
+  "timestamp": "2025-07-29T23:43:55.745678",
+  "results": {
+    "cthinkpad": {
+      "name": "CThinkPad (Current)",
+      "ip": "172.21.128.1",
+      "reachable": false,
+      "latency_ms": null,
+      "health_status": null,
+      "market_data": null,
+      "data_freshness": null,
+      "tick_count": null,
+      "update_frequency": null,
+      "errors": [
+        "Connectivity: HTTPConnectionPool(host='172.21.128.1', port=8765): Max retries exceeded with url: /health (Caused by ConnectTimeoutError(<urllib3.connection.HTTPConnection object at 0x7608196d2080>, 'Connection to 172.21.128.1 timed out. (connect timeout=5)'))"
+      ]
+    },
+    "marypc": {
+      "name": "MaryPC (New)",
+      "ip": "100.123.37.79",
+      "reachable": true,
+      "latency_ms": 37.84747123718262,
+      "health_status": {
+        "status": "healthy",
+        "timestamp": "2025-07-29T23:43:45.001095",
+        "service": "minhos_sierra_bridge",
+        "version": "3.1.0"
+      },
+      "market_data": {
+        "NQU25-CME": {
+          "symbol": "NQU25-CME",
+          "timestamp": "2025-07-29T23:43:44.611971",
+          "price": 23507.25,
+          "volume": 0,
+          "bid": 23507.25,
+          "ask": 23507.25,
+          "high": 23507.25,
+          "low": 23506.5,
+          "open": 0.0,
+          "source": "sierra_chart_scid",
+          "bid_size": null,
+          "ask_size": null,
+          "last_size": null,
+          "vwap": null,
+          "trades": null,
+          "timestamp_us": null,
+          "trade_side": null,
+          "sequence": null,
+          "precision": null
+        },
+        "ESU25-CME": {
+          "symbol": "ESU25-CME",
+          "timestamp": "2025-07-29T23:43:44.612180",
+          "price": 6415.25,
+          "volume": 0,
+          "bid": 6415.25,
+          "ask": 6415.25,
+          "high": 6415.25,
+          "low": 6415.0,
+          "open": -1.9990019654456028e+37,
+          "source": "sierra_chart_scid",
+          "bid_size": null,
+          "ask_size": null,
+          "last_size": null,
+          "vwap": null,
+          "trades": null,
+          "timestamp_us": null,
+          "trade_side": null,
+          "sequence": null,
+          "precision": null
+        },
+        "VIX_CGI": {
+          "symbol": "VIX_CGI",
+          "timestamp": "2025-07-29T23:43:44.612356",
+          "price": 15.979999542236328,
+          "volume": 0,
+          "bid": 15.979999542236328,
+          "ask": 15.979999542236328,
+          "high": 0.0,
+          "low": 0.0,
+          "open": 0.0,
+          "source": "sierra_chart_scid",
+          "bid_size": null,
+          "ask_size": null,
+          "last_size": null,
+          "vwap": null,
+          "trades": null,
+          "timestamp_us": null,
+          "trade_side": null,
+          "sequence": null,
+          "precision": null
+        }
+      },
+      "data_freshness": 0.508117,
+      "tick_count": {},
+      "update_frequency": 0,
+      "errors": [],
+      "latency_std": 38.575038121477654,
+      "symbol_count": 3
+    }
+  },
+  "analysis": {
+    "recommendation": "Recommend MaryPC (New)",
+    "winner": "MaryPC (New)",
+    "comparison": {},
+    "scores": {
+      "cthinkpad": {
+        "score": 8,
+        "max_score": 100,
+        "percentage": 8.0
+      },
+      "marypc": {
+        "score": 80,
+        "max_score": 100,
+        "percentage": 80.0
+      }
+    }
+  }
+}

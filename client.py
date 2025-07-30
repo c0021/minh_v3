@@ -21,7 +21,8 @@ class MinhOSClient:
         self.session: Optional[aiohttp.ClientSession] = None
         
     async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
+        timeout = aiohttp.ClientTimeout(total=30)
+        self.session = aiohttp.ClientSession(timeout=timeout)
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -31,8 +32,12 @@ class MinhOSClient:
     async def health_check(self) -> Dict[str, Any]:
         """Check bridge health status"""
         try:
-            async with self.session.get(f"{self.bridge_url}/health") as resp:
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with self.session.get(f"{self.bridge_url}/health", timeout=timeout) as resp:
                 return await resp.json()
+        except asyncio.TimeoutError:
+            logger.error(f"Health check timeout: Connection to {self.bridge_url} timed out")
+            return {"status": "error", "message": f"Connection timeout to host {self.bridge_url}/health"}
         except Exception as e:
             logger.error(f"Health check failed: {e}")
             return {"status": "error", "message": str(e)}
@@ -102,7 +107,8 @@ async def main():
     
     # Configure your Windows bridge URL here
     # Use your Tailscale hostname or IP
-    BRIDGE_URL = "http://cthinkpad:8765"
+    import os
+    BRIDGE_URL = f"http://{os.getenv('BRIDGE_HOSTNAME', '172.21.128.1')}:8765"
     
     async with MinhOSClient(BRIDGE_URL) as client:
         # Check health

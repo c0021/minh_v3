@@ -15,6 +15,31 @@ from dataclasses import dataclass
 import json
 import yaml
 
+# Load environment variables from .env file if it exists
+def load_env_file():
+    """Load environment variables from .env file"""
+    env_file = Path(__file__).parent.parent.parent / ".env"
+    if env_file.exists():
+        try:
+            with open(env_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        # Remove quotes if present
+                        if value.startswith('"') and value.endswith('"'):
+                            value = value[1:-1]
+                        elif value.startswith("'") and value.endswith("'"):
+                            value = value[1:-1]
+                        os.environ[key] = value
+        except Exception as e:
+            print(f"Warning: Failed to load .env file: {e}")
+
+# Load .env file when module is imported
+load_env_file()
+
 
 @dataclass
 class SierraConfig:
@@ -97,6 +122,24 @@ class TradingConfig:
     risk_free_rate: float = 0.02
     enable_paper_trading: bool = False  # REAL TRADING ONLY - Configure paper trading in Sierra Chart if needed
     default_symbol: str = "NQ"
+    autonomous_threshold: float = 0.75  # Minimum confidence for autonomous trades
+    
+@dataclass
+class TimingConfig:
+    """Timing and interval configuration"""
+    market_analysis: int = 5000  # milliseconds
+    decision_check: int = 30000  # milliseconds
+    service_status_update: int = 10000  # milliseconds
+    ai_transparency_update: int = 2000  # milliseconds
+
+@dataclass
+class ServicesConfig:
+    """Services enablement configuration"""
+    dashboard: dict = None
+    
+    def __post_init__(self):
+        if self.dashboard is None:
+            self.dashboard = {"enabled": True}
 
 
 @dataclass
@@ -197,6 +240,8 @@ class Config:
         self.api = APIConfig(**self._get_config_section("api", {}))
         self.websocket = WebSocketConfig(**self._get_config_section("websocket", {}))
         self.trading = TradingConfig(**self._get_config_section("trading", {}))
+        self.timing = TimingConfig(**self._get_config_section("timing", {}))
+        self.services = ServicesConfig(**self._get_config_section("services", {}))
         self.ai = AIConfig(**self._get_config_section("ai", {}))
         self.nlp = NLPConfig(**self._get_config_section("nlp", {}))
         self.logging = LoggingConfig(**self._get_config_section("logging", {}))
@@ -340,6 +385,35 @@ class Config:
         """Get ML models directory path"""
         return self.base_dir / "ml_models"
     
+    def get(self, key: str, default=None):
+        """
+        Get configuration value using dot notation
+        For compatibility with legacy code expecting config.get()
+        
+        Example: config.get("trading.autonomous_threshold", 0.75)
+        """
+        try:
+            # Split the key by dots
+            parts = key.split(".")
+            
+            if len(parts) != 2:
+                # If not in section.key format, return default
+                return default
+            
+            section, attr = parts
+            
+            # Get the section object
+            if hasattr(self, section):
+                section_obj = getattr(self, section)
+                # Get the attribute from the section
+                if hasattr(section_obj, attr):
+                    return getattr(section_obj, attr)
+            
+            return default
+            
+        except Exception:
+            return default
+    
     def to_dict(self) -> Dict:
         """Export configuration to dictionary"""
         return {
@@ -350,6 +424,8 @@ class Config:
             "api": self.api.__dict__,
             "websocket": self.websocket.__dict__,
             "trading": self.trading.__dict__,
+            "timing": self.timing.__dict__,
+            "services": self.services.__dict__,
             "ai": self.ai.__dict__,
             "nlp": self.nlp.__dict__,
             "logging": self.logging.__dict__,

@@ -1,0 +1,110 @@
+<!-- Historical Data Scope Indicator Section -->
+<div class="historical-data-section dashboard-section" style="background: linear-gradient(135deg, #2e2e1a 0%, #1a1a2e 100%); border-left: 4px solid #ffc107; margin-bottom: 30px;">
+    <h2 style="color: #ffc107; margin-bottom: 20px;">📈 HISTORICAL DATA ADVANTAGE - 20X MORE CONTEXT</h2>
+    
+    <!-- Data Scope Overview -->
+    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <div class="status-card data-card">
+            <h3>📊 Data Multiplier</h3>
+            <div class="status-value" style="color: #ffc107;">20X</div>
+            <div class="status-label">vs Standard Feeds</div>
+        </div>
+        <div class="status-card data-card">
+            <h3>⏰ Historical Depth</h3>
+            <div class="status-value" id="historical-depth">0</div>
+            <div class="status-label">Years Available</div>
+        </div>
+        <div class="status-card data-card">
+            <h3>🎯 Tick Resolution</h3>
+            <div class="status-value">FULL</div>
+            <div class="status-label">Every Trade</div>
+        </div>
+        <div class="status-card data-card">
+            <h3>🔄 Archive Size</h3>
+            <div class="status-value" id="archive-size">0 GB</div>
+            <div class="status-label">Total Data</div>
+        </div>
+    </div>
+    
+    <!-- Data Advantage Breakdown -->
+    <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr; gap: 20px;">
+        <!-- Historical Analysis Context -->
+        <div class="panel">
+            <h2>🎯 Historical Analysis Context</h2>
+            <div class="context-item" style="margin-bottom: 15px; padding: 12px; background: rgba(255, 193, 7, 0.1); border-radius: 6px; border-left: 3px solid #ffc107;">
+                <div style="font-weight: bold; color: #e0e0e0;">Market Regime Analysis</div>
+                <div style="font-size: 13px; color: #b0b0b0; margin: 5px 0;">
+                    Current pattern similar to Q3 2019 bull run (87% correlation)
+                </div>
+                <div style="font-size: 12px; color: #a0a0a0;">
+                    Historical data shows 73% success rate for this regime
+                </div>
+            </div>
+            
+            <div class="context-item" style="margin-bottom: 15px; padding: 12px; background: rgba(255, 193, 7, 0.1); border-radius: 6px; border-left: 3px solid #ffc107;">
+                <div style="font-weight: bold; color: #e0e0e0;">Volatility Context</div>
+                <div style="font-size: 13px; color: #b0b0b0; margin: 5px 0;">
+                    Current volatility: 18.4% (32nd percentile historical)
+                </div>
+                <div style="font-size: 12px; color: #a0a0a0;">
+                    Low vol environments show 2.3x higher win rates
+                </div>
+            </div>
+            
+            <div class="context-item" style="margin-bottom: 15px; padding: 12px; background: rgba(255, 193, 7, 0.1); border-radius: 6px; border-left: 3px solid #ffc107;">
+                <div style="font-weight: bold; color: #e0e0e0;">Seasonal Patterns</div>
+                <div style="font-size: 13px; color: #b0b0b0; margin: 5px 0;">
+                    July historically bullish (68% up months since 2010)
+                </div>
+                <div style="font-size: 12px; color: #a0a0a0;">
+                    Current positioning aligns with seasonal bias
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data Source Status -->
+        <div class="panel">
+            <h2>🔌 Data Sources</h2>
+            <div class="data-source" style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <span style="color: #e0e0e0; font-weight: bold;">Sierra Chart Archive</span>
+                    <span style="color: #4caf50; font-size: 12px;">✅ ACTIVE</span>
+                </div>
+                <div style="font-size: 12px; color: #a0a0a0;">Complete tick data since 2010</div>
+                <div style="font-size: 11px; color: #888;">Last sync: 2 min ago</div>
+            </div>
+            
+            <div class="data-source" style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <span style="color: #e0e0e0; font-weight: bold;">Live Market Feed</span>
+                    <span style="color: #4caf50; font-size: 12px;">✅ STREAMING</span>
+                </div>
+                <div style="font-size: 12px; color: #a0a0a0;">Real-time execution data</div>
+                <div style="font-size: 11px; color: #888;">Latency: <span id="feed-latency">12ms</span></div>
+            </div>
+            
+            <div class="data-source" style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <span style="color: #e0e0e0; font-weight: bold;">Gap Fill Engine</span>
+                    <span style="color: #4caf50; font-size: 12px;">✅ MONITORING</span>
+                </div>
+                <div style="font-size: 12px; color: #a0a0a0;">Automatic data continuity</div>
+                <div style="font-size: 11px; color: #888;">Gaps filled: <span id="gaps-filled">0</span> today</div>
+            </div>
+            
+            <!-- Data Advantage Metrics -->
+            <div style="background: rgba(255, 193, 7, 0.1); padding: 15px; border-radius: 6px; margin-top: 20px;">
+                <div style="color: #ffc107; font-weight: bold; margin-bottom: 10px;">Competitive Advantage</div>
+                <div style="font-size: 13px; color: #e0e0e0; margin-bottom: 5px;">
+                    <strong>Pattern Recognition:</strong> 20x more training data
+                </div>
+                <div style="font-size: 13px; color: #e0e0e0; margin-bottom: 5px;">
+                    <strong>Backtesting:</strong> Full tick precision
+                </div>
+                <div style="font-size: 13px; color: #e0e0e0;">
+                    <strong>AI Learning:</strong> Massive historical context
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

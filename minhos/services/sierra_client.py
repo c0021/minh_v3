@@ -40,6 +40,189 @@ from minhos.models.market import MarketData
 
 logger = logging.getLogger(__name__)
 
+# 🚀 Phase 2 Optimization: WebSocket client for event-driven data
+class OptimizedWebSocketClient:
+    """WebSocket client optimized for delta updates and client-side caching"""
+    
+    def __init__(self, bridge_url: str, symbols: List[str]):
+        self.bridge_url = bridge_url.replace('http://', 'ws://').replace('https://', 'wss://')
+        self.symbols = symbols
+        self.connections = {}  # symbol -> websocket connection
+        self.cache = {}  # symbol -> cached data with TTL
+        self.cache_ttl = 5.0  # 5-second cache TTL
+        self.last_heartbeat = {}
+        self.reconnect_delay = 1.0
+        self.max_reconnect_delay = 30.0
+        self.running = False
+        self.message_handler = None  # Callback for market data
+        
+    async def start(self, message_handler=None):
+        """Start WebSocket connections for all symbols"""
+        self.running = True
+        self.message_handler = message_handler
+        logger.info(f"🚀 Starting optimized WebSocket connections for {len(self.symbols)} symbols")
+        
+        # Start connections for each symbol
+        tasks = []
+        for symbol in self.symbols:
+            task = asyncio.create_task(self._maintain_connection(symbol))
+            tasks.append(task)
+        
+        return tasks
+    
+    async def stop(self):
+        """Stop all WebSocket connections"""
+        self.running = False
+        logger.info("🛑 Stopping optimized WebSocket connections")
+        
+        # Close all connections
+        for symbol, ws in self.connections.items():
+            try:
+                await ws.close()
+            except:
+                pass
+        
+        self.connections.clear()
+    
+    async def _maintain_connection(self, symbol: str):
+        """Maintain WebSocket connection for a symbol with auto-reconnection"""
+        reconnect_delay = self.reconnect_delay
+        
+        while self.running:
+            try:
+                ws_url = f"{self.bridge_url}/ws/live_data/{symbol}"
+                logger.debug(f"Connecting to optimized WebSocket: {ws_url}")
+                
+                async with websockets.connect(
+                    ws_url,
+                    ping_interval=20,
+                    ping_timeout=10,
+                    close_timeout=5
+                ) as websocket:
+                    
+                    self.connections[symbol] = websocket
+                    reconnect_delay = self.reconnect_delay  # Reset delay on success
+                    logger.info(f"✅ Optimized WebSocket connected for {symbol}")
+                    
+                    # Handle messages
+                    async for message in websocket:
+                        if not self.running:
+                            break
+                            
+                        market_data = await self._handle_websocket_message(symbol, message)
+                        if market_data and self.message_handler:
+                            await self.message_handler(symbol, market_data)
+                        
+            except Exception as e:
+                logger.warning(f"WebSocket connection error for {symbol}: {e}")
+                
+                # Remove failed connection
+                if symbol in self.connections:
+                    del self.connections[symbol]
+                
+                # Exponential backoff
+                if self.running:
+                    await asyncio.sleep(reconnect_delay)
+                    reconnect_delay = min(reconnect_delay * 2, self.max_reconnect_delay)
+    
+    async def _handle_websocket_message(self, symbol: str, message: str):
+        """Handle WebSocket message with delta processing"""
+        try:
+            data = json.loads(message)
+            msg_type = data.get('type')
+            
+            if msg_type == 'market_data_delta':
+                # Process delta update
+                delta = data.get('delta', {})
+                full_data = data.get('full_data', {})
+                
+                # Update cache with full data
+                self.cache[symbol] = {
+                    'data': full_data,
+                    'timestamp': time.time()
+                }
+                
+                logger.debug(f"📈 Delta update for {symbol}: {len(delta)} fields changed")
+                return full_data
+                
+            elif msg_type == 'initial_state':
+                # Initial state for new connection
+                initial_data = data.get('data', {})
+                self.cache[symbol] = {
+                    'data': initial_data,
+                    'timestamp': time.time()
+                }
+                
+                logger.debug(f"📊 Initial state received for {symbol}")
+                return initial_data
+                
+            elif msg_type == 'ping':
+                # Send heartbeat response
+                if symbol in self.connections:
+                    await self.connections[symbol].send(json.dumps({
+                        'type': 'heartbeat',
+                        'timestamp': time.time()
+                    }))
+                
+        except Exception as e:
+            logger.error(f"Error handling WebSocket message for {symbol}: {e}")
+            return None
+    
+    async def get_cached_data(self, symbol: str) -> Optional[dict]:
+        """Get cached data with TTL check"""
+        if symbol not in self.cache:
+            return None
+            
+        cache_entry = self.cache[symbol]
+        age = time.time() - cache_entry['timestamp']
+        
+        if age <= self.cache_ttl:
+            logger.debug(f"🎯 Cache hit for {symbol} (age: {age:.1f}s)")
+            return cache_entry['data']
+        else:
+            logger.debug(f"🔄 Cache miss for {symbol} (expired: {age:.1f}s)")
+            return None
+    
+    def get_connection_stats(self):
+        """Get connection statistics with cache performance metrics"""
+        active_connections = len(self.connections)
+        cached_symbols = len(self.cache)
+        
+        # Calculate cache hit rate and freshness
+        cache_stats = self.get_cache_statistics()
+        
+        return {
+            'active_connections': active_connections,
+            'cached_symbols': cached_symbols,
+            'connection_symbols': list(self.connections.keys()),
+            'cache_symbols': list(self.cache.keys()),
+            'cache_performance': cache_stats
+        }
+    
+    def get_cache_statistics(self):
+        """Get detailed cache performance statistics"""
+        current_time = time.time()
+        fresh_cache_count = 0
+        total_cache_age = 0
+        
+        for symbol, cache_entry in self.cache.items():
+            age = current_time - cache_entry['timestamp']
+            total_cache_age += age
+            if age <= self.cache_ttl:
+                fresh_cache_count += 1
+        
+        cache_count = len(self.cache)
+        avg_cache_age = total_cache_age / cache_count if cache_count > 0 else 0
+        cache_freshness = fresh_cache_count / cache_count if cache_count > 0 else 0
+        
+        return {
+            'total_cached_symbols': cache_count,
+            'fresh_cache_entries': fresh_cache_count,
+            'average_cache_age_seconds': round(avg_cache_age, 2),
+            'cache_freshness_ratio': round(cache_freshness, 3),
+            'cache_ttl_seconds': self.cache_ttl
+        }
+
 class ConnectionState(Enum):
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
@@ -109,15 +292,20 @@ class SierraClient(BaseService):
         self.last_market_data: Dict[str, MarketData] = {}
         self._data_handlers = []  # Initialize data handlers list
         
+        # 🚀 Phase 2 Optimization: WebSocket client
+        self.optimized_client = None
+        self.use_websocket_optimization = True  # Enable by default
+        self.websocket_tasks = []
+        
         # Trading
         self.pending_trades: Dict[str, TradeCommand] = {}
         
-        # Multi-chart symbols (configured for your setup)
-        self.symbols = {
-            'NQU25-CME': {'timeframes': ['1min', '30min', 'daily'], 'primary': True},
-            'ESU25-CME': {'timeframes': ['1min'], 'primary': False},
-            'VIX': {'timeframes': ['1min'], 'primary': False}
-        }
+        # Multi-chart symbols (centralized symbol management)
+        from ..core.symbol_integration import get_sierra_client_symbols, get_symbol_integration
+        self.symbols = get_sierra_client_symbols()
+        
+        # Mark service as migrated to centralized symbol management
+        get_symbol_integration().mark_service_migrated('sierra_client')
         
         logger.info(f"Sierra Client initialized - Bridge: {self.bridge_url}")
     
@@ -239,21 +427,81 @@ class SierraClient(BaseService):
         # Start connection management
         asyncio.create_task(self._connection_manager())
         
-        # Start market data streaming
+        # 🚀 Phase 2 Optimization: Start WebSocket client if enabled
+        if self.use_websocket_optimization:
+            await self._start_optimized_websocket_client()
+        
+        # Start market data streaming (will detect and use WebSocket or fallback to HTTP)
         asyncio.create_task(self._market_data_streamer())
         
-        logger.info("Sierra Client started successfully")
+        logger.info(f"✅ Sierra Client started ({'optimized WebSocket' if self.use_websocket_optimization else 'HTTP polling'})")
     
     async def stop(self):
         """Stop the Sierra Client service"""
         self.running = False
         self.connection_state = ConnectionState.DISCONNECTED
         
+        # Stop optimized WebSocket client
+        if self.optimized_client:
+            await self.optimized_client.stop()
+        
+        # Cancel WebSocket tasks
+        for task in self.websocket_tasks:
+            task.cancel()
+        
         if self.session:
             await self.session.close()
         
         await super().stop()
-        logger.info("Sierra Client stopped")
+        logger.info("✅ Sierra Client stopped (optimized WebSocket disconnected)")
+    
+    async def _start_optimized_websocket_client(self):
+        """Start optimized WebSocket client for event-driven data"""
+        try:
+            self.optimized_client = OptimizedWebSocketClient(
+                bridge_url=self.bridge_url,
+                symbols=self.symbols
+            )
+            
+            # Start WebSocket connections with market data handler
+            self.websocket_tasks = await self.optimized_client.start(
+                message_handler=self._handle_websocket_market_data
+            )
+            
+            logger.info(f"🚀 Optimized WebSocket client started for {len(self.symbols)} symbols")
+            
+        except Exception as e:
+            logger.error(f"Failed to start optimized WebSocket client: {e}")
+            logger.info("Falling back to HTTP polling mode")
+            self.use_websocket_optimization = False
+            self.optimized_client = None
+    
+    async def _handle_websocket_market_data(self, symbol: str, market_data_dict: dict):
+        """Handle market data from optimized WebSocket client"""
+        try:
+            # Convert dict to MarketData object
+            # For now, create a simplified MarketData object
+            market_data = MarketData(
+                symbol=symbol,
+                timestamp=datetime.now(),
+                price=market_data_dict.get('price', 0.0),
+                volume=market_data_dict.get('volume', 0),
+                bid=market_data_dict.get('bid', 0.0),
+                ask=market_data_dict.get('ask', 0.0),
+                open=market_data_dict.get('open', 0.0),
+                high=market_data_dict.get('high', 0.0),
+                low=market_data_dict.get('low', 0.0),
+                close=market_data_dict.get('close', 0.0)
+            )
+            
+            # Store and broadcast
+            self.last_market_data[symbol] = market_data
+            await self._broadcast_market_data(market_data)
+            
+            logger.debug(f"🚀 WebSocket market data: {symbol} @ ${market_data.close}")
+            
+        except Exception as e:
+            logger.error(f"Error handling WebSocket market data for {symbol}: {e}")
     
     async def _connection_manager(self):
         """Manage connection to Windows bridge with auto-reconnect"""
@@ -326,30 +574,76 @@ class SierraClient(BaseService):
             return None
     
     async def _verify_connection(self) -> bool:
-        """Verify bridge connection is still active"""
+        """Verify bridge connection is still active AND actually providing data"""
+        # First check basic health
         health = await self._check_bridge_health()
-        return health is not None and health.get('status') == 'healthy'
+        if not health or health.get('status') != 'healthy':
+            return False
+        
+        # More importantly - check if we're actually getting market data
+        try:
+            # Get primary symbol for health check from centralized management
+            from ..core.symbol_integration import get_symbol_integration
+            symbol_integration = get_symbol_integration()
+            primary_symbol = symbol_integration.get_ai_brain_primary_symbol()
+            
+            # Test if we can get actual market data (not just health ping)
+            async with self.session.get(f"{self.bridge_url}/api/data/{primary_symbol}", timeout=5) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    # Verify we got real data, not empty/cached
+                    if data.get('price', 0) > 0 and data.get('timestamp'):
+                        return True
+                    else:
+                        logger.warning("Bridge responding but no real market data (price=0 or no timestamp)")
+                        return False
+                else:
+                    logger.warning(f"Bridge health OK but market data endpoint failed: {resp.status}")
+                    return False
+        except Exception as e:
+            logger.warning(f"Bridge health OK but market data fetch failed: {e}")
+            return False
     
     async def _market_data_streamer(self):
         """Stream market data from bridge and relay to MinhOS services"""
-        logger.info("🔄 Market data streaming started")
+        # 🚀 Phase 2 Optimization: Check if WebSocket optimization is active
+        if self.use_websocket_optimization and self.optimized_client:
+            logger.info("🚀 Market data streaming via optimized WebSocket (HTTP polling disabled)")
+            # WebSocket handles data streaming, this method just monitors
+            while self.running:
+                try:
+                    # Just monitor WebSocket connection health
+                    if self.optimized_client:
+                        stats = self.optimized_client.get_connection_stats()
+                        if stats['active_connections'] == 0:
+                            logger.warning("⚠️ No active WebSocket connections - potential fallback needed")
+                    
+                    await asyncio.sleep(30)  # Check every 30 seconds instead of 1 second
+                    
+                except Exception as e:
+                    logger.error(f"WebSocket monitoring error: {e}")
+                    await asyncio.sleep(5.0)
+            return  # Exit early if using WebSocket optimization
+        
+        # Legacy HTTP polling mode
+        logger.info("🔄 Market data streaming via HTTP polling (fallback mode)")
         
         while self.running:
             try:
                 logger.debug(f"Market data streaming loop - Connection state: {self.connection_state}")
                 
                 if self.connection_state == ConnectionState.CONNECTED:
-                    # Get latest market data for primary symbol
-                    logger.debug("Fetching market data from bridge...")
-                    market_data = await self.get_market_data()
+                    # Get market data for all symbols
+                    logger.debug("Fetching all market data from bridge...")
+                    all_market_data = await self.get_all_market_data()
                     
-                    if market_data:
-                        logger.debug(f"🔄 Streaming: {market_data.symbol} @ ${market_data.close}")
-                        # Store and broadcast to subscribers
-                        self.last_market_data[market_data.symbol] = market_data
-                        logger.debug("🎯 About to call _broadcast_market_data...")
-                        await self._broadcast_market_data(market_data)
-                        logger.debug("🎯 _broadcast_market_data completed")
+                    if all_market_data:
+                        logger.info(f"🔄 Streaming {len(all_market_data)} symbols")
+                        # Store and broadcast each symbol
+                        for symbol, market_data in all_market_data.items():
+                            logger.debug(f"📊 {symbol} @ ${market_data.close}")
+                            self.last_market_data[symbol] = market_data
+                            await self._broadcast_market_data(market_data)
                     else:
                         logger.debug("No market data received from bridge")
                 else:
@@ -373,7 +667,15 @@ class SierraClient(BaseService):
             async with self.session.get(f"{self.bridge_url}/api/market_data", timeout=5) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    return MarketData.from_sierra_data(data)
+                    # Bridge returns dictionary of symbols
+                    if isinstance(data, dict) and data:
+                        # If specific symbol requested, return that one
+                        if symbol and symbol in data:
+                            return MarketData.from_sierra_data(data[symbol])
+                        # Otherwise return the first available symbol (primary)
+                        first_symbol = next(iter(data.keys()))
+                        return MarketData.from_sierra_data(data[first_symbol])
+                    return None
                 elif resp.status == 404:
                     logger.debug("No market data available from Sierra Chart")
                     return None
@@ -383,6 +685,46 @@ class SierraClient(BaseService):
         except Exception as e:
             logger.error(f"Market data fetch error: {e}")
             return None
+    
+    async def get_all_market_data(self) -> Dict[str, MarketData]:
+        """Get market data for all symbols from bridge"""
+        if self.connection_state != ConnectionState.CONNECTED:
+            return {}
+        
+        try:
+            async with self.session.get(f"{self.bridge_url}/api/market_data", timeout=5) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    
+                    # Get expected symbols from centralized management
+                    from ..core.symbol_integration import get_symbol_integration
+                    symbol_integration = get_symbol_integration()
+                    expected_symbols = set(symbol_integration.get_bridge_symbols())
+                    
+                    # Convert all symbols to MarketData objects
+                    result = {}
+                    for symbol, symbol_data in data.items():
+                        try:
+                            # Validate symbol is expected (log warning if unexpected)
+                            if symbol not in expected_symbols:
+                                logger.debug(f"Bridge providing unexpected symbol: {symbol}")
+                            
+                            result[symbol] = MarketData.from_sierra_data(symbol_data)
+                        except Exception as e:
+                            logger.error(f"Failed to parse market data for {symbol}: {e}")
+                    
+                    # Log if we're missing expected symbols
+                    received_symbols = set(result.keys())
+                    missing_symbols = expected_symbols - received_symbols
+                    if missing_symbols:
+                        logger.warning(f"Bridge missing expected symbols: {missing_symbols}")
+                    
+                    return result
+                else:
+                    return {}
+        except Exception as e:
+            logger.error(f"Market data fetch error: {e}")
+            return {}
     
     async def execute_trade(self, trade_command: TradeCommand) -> Optional[TradeResult]:
         """Execute trade via bridge"""
@@ -550,10 +892,17 @@ class SierraClient(BaseService):
         
         elif req_type == 'execute_trade':
             trade_data = request.get('data', {})
+            # Get default symbol from centralized management if none provided
+            default_symbol = trade_data.get('symbol')
+            if not default_symbol:
+                from ..core.symbol_integration import get_symbol_integration
+                symbol_integration = get_symbol_integration()
+                default_symbol = symbol_integration.get_ai_brain_primary_symbol()
+            
             trade_command = TradeCommand(
                 command_id=f"minhos_{int(time.time() * 1000)}",
                 action=trade_data.get('action', 'BUY'),
-                symbol=trade_data.get('symbol', 'NQU25-CME'),
+                symbol=default_symbol,
                 quantity=int(trade_data.get('quantity', 1)),
                 price=trade_data.get('price'),
                 order_type=trade_data.get('order_type', 'MARKET')

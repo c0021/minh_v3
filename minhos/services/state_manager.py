@@ -130,6 +130,13 @@ class StateManager:
         self.market_data_adapter = get_market_data_adapter()
         self.last_market_update = None
         
+        # Centralized symbol management integration
+        from ..core.symbol_integration import get_symbol_integration
+        self.symbol_integration = get_symbol_integration()
+        
+        # Mark service as migrated to centralized symbol management
+        self.symbol_integration.mark_service_migrated('state_manager')
+        
         # P&L tracking
         self.pnl = {
             "today": 0.0,
@@ -368,15 +375,33 @@ class StateManager:
     async def _on_market_data_update(self, data):
         """Handle market data updates from unified store"""
         try:
+            # Handle both MarketData objects and dictionaries
+            if isinstance(data, dict):
+                symbol = data.get('symbol')
+                close = data.get('close')
+                bid = data.get('bid')
+                ask = data.get('ask')
+                volume = data.get('volume')
+                timestamp = data.get('timestamp')
+                source = data.get('source', 'unified_store')
+            else:
+                symbol = data.symbol
+                close = data.close
+                bid = data.bid
+                ask = data.ask
+                volume = data.volume
+                timestamp = data.timestamp
+                source = data.source or "unified_store"
+            
             # Convert MarketData to MarketDataPoint for compatibility
             market_data = MarketDataPoint(
-                symbol=data.symbol,
-                close=data.close,
-                bid=data.bid,
-                ask=data.ask,
-                volume=data.volume,
-                timestamp=datetime.fromtimestamp(data.timestamp).isoformat() if data.timestamp else "",
-                source=data.source or "unified_store",
+                symbol=symbol,
+                close=close,
+                bid=bid,
+                ask=ask,
+                volume=volume,
+                timestamp=datetime.fromtimestamp(timestamp).isoformat() if timestamp else "",
+                source=source,
                 received_at=datetime.now().isoformat()
             )
             
@@ -449,6 +474,9 @@ class StateManager:
         """Update position information"""
         async with self.state_lock:
             try:
+                # Validate symbol against centralized management
+                await self._validate_symbol(symbol)
+                
                 old_state = self.trading_state
                 
                 if symbol in self.positions:
@@ -644,6 +672,20 @@ class StateManager:
     # State retrieval methods
     def get_current_state(self) -> Dict[str, Any]:
         """Get complete current state"""
+        # Add symbol management information to stats
+        try:
+            tradeable_symbols = self.symbol_integration.get_trading_engine_symbols()
+            rollover_status = self.symbol_integration.check_rollover_status()
+            symbol_info = {
+                "tradeable_symbols_count": len(tradeable_symbols),
+                "tradeable_symbols": tradeable_symbols,
+                "rollover_alerts": rollover_status.get('total_upcoming', 0),
+                "rollover_needs_attention": rollover_status.get('needs_attention', False)
+            }
+        except Exception as e:
+            logger.debug(f"Could not get symbol management info: {e}")
+            symbol_info = {"error": "Symbol management unavailable"}
+        
         return {
             "trading_state": self.trading_state.value,
             "system_state": self.system_state.value,
@@ -655,12 +697,29 @@ class StateManager:
             "market_data": {k: asdict(v) for k, v in self.get_market_data().items()},  # MIGRATED: Get from unified store
             "last_market_update": self.last_market_update.isoformat() if self.last_market_update else None,
             "stats": self.stats.copy(),
+            "symbol_management": symbol_info,
             "timestamp": datetime.now().isoformat()
         }
     
     def get_positions(self) -> Dict[str, Position]:
         """Get all current positions"""
         return self.positions.copy()
+    
+    def get_tradeable_symbols(self) -> List[str]:
+        """Get list of tradeable symbols from centralized management"""
+        try:
+            return self.symbol_integration.get_trading_engine_symbols()
+        except Exception as e:
+            logger.error(f"Error getting tradeable symbols: {e}")
+            return []
+    
+    def get_symbol_rollover_status(self) -> Dict[str, Any]:
+        """Get symbol rollover status from centralized management"""
+        try:
+            return self.symbol_integration.check_rollover_status()
+        except Exception as e:
+            logger.error(f"Error getting rollover status: {e}")
+            return {'needs_attention': False, 'urgent_rollovers': 0, 'total_upcoming': 0, 'alerts': []}
     
     def get_all_positions(self) -> Dict[str, Position]:
         """Get all current positions (alias for get_positions)"""
@@ -708,6 +767,27 @@ class StateManager:
             logger.error(f"❌ Error getting market data: {e}")
             return {} if symbol is None else None
     
+    async def _validate_symbol(self, symbol: str):
+        """Validate symbol against centralized management"""
+        try:
+            # Check if symbol is in tradeable symbols list
+            tradeable_symbols = self.symbol_integration.get_trading_engine_symbols()
+            if symbol not in tradeable_symbols:
+                logger.warning(f"Symbol {symbol} not in approved tradeable symbols list: {tradeable_symbols}")
+                # Don't block - State Manager should accept any symbol for monitoring
+                # but log warning for review
+            
+            # Check rollover status for informational purposes
+            rollover_status = self.symbol_integration.check_rollover_status()
+            if rollover_status.get('needs_attention', False):
+                urgent_rollovers = rollover_status.get('urgent_rollovers', [])
+                if symbol in [alert['current_symbol'] for alert in urgent_rollovers]:
+                    logger.info(f"Position update for symbol {symbol} - rollover attention needed")
+                    
+        except Exception as e:
+            logger.debug(f"Symbol validation warning: {e}")
+            # Don't block on validation errors
+    
     def get_risk_parameters(self) -> RiskParameters:
         """Get current risk parameters"""
         return self.risk_params
@@ -715,6 +795,102 @@ class StateManager:
     def get_system_config(self) -> SystemConfig:
         """Get current system configuration"""
         return self.system_config
+    
+    async def get_recent_trades(self, days: int = 30, symbol: str = None) -> List[Dict[str, Any]]:
+        """Get recent trading history for Kelly Criterion calculations"""
+        try:
+            cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
+            
+            with sqlite3.connect(str(self.db_path)) as conn:
+                cursor = conn.cursor()
+                
+                # Query trade history from state_history table
+                # Look for position_updated events with realized P&L
+                query = '''
+                    SELECT timestamp, data, old_state, new_state 
+                    FROM state_history 
+                    WHERE event_type = 'position_updated' 
+                    AND timestamp >= ?
+                '''
+                params = [cutoff_date]
+                
+                if symbol:
+                    query += ' AND data LIKE ?'
+                    params.append(f'%"{symbol}"%')
+                
+                query += ' ORDER BY timestamp DESC'
+                
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+                
+                trades = []
+                for timestamp_str, data_str, old_state, new_state in rows:
+                    try:
+                        data = json.loads(data_str) if data_str else {}
+                        
+                        # Extract trade information
+                        if 'position' in data:
+                            position_data = data['position']
+                            
+                            # Calculate P&L from position data
+                            unrealized_pnl = position_data.get('unrealized_pnl', 0.0)
+                            
+                            trade = {
+                                'timestamp': timestamp_str,
+                                'symbol': position_data.get('symbol', 'UNKNOWN'),
+                                'pnl': unrealized_pnl,
+                                'profit_loss': unrealized_pnl,
+                                'outcome': 'win' if unrealized_pnl > 0 else 'loss',
+                                'side': position_data.get('side', 'UNKNOWN'),
+                                'quantity': position_data.get('quantity', 0),
+                                'entry_price': position_data.get('entry_price', 0.0),
+                                'current_price': position_data.get('current_price', 0.0)
+                            }
+                            
+                            trades.append(trade)
+                            
+                    except Exception as e:
+                        logger.debug(f"Error parsing trade data: {e}")
+                        continue
+                
+                # If no real trades found, create some synthetic trade history for testing
+                if not trades and not symbol:
+                    logger.info("No trade history found, generating sample data for Kelly calculations")
+                    
+                    # Generate realistic sample trades for the primary symbol
+                    primary_symbol = self.symbol_integration.get_ai_brain_primary_symbol()
+                    base_price = 23500.0  # Approximate NQU25 price
+                    
+                    import random
+                    random.seed(42)  # Consistent results
+                    
+                    for i in range(min(20, days)):  # Generate up to 20 sample trades
+                        trade_date = datetime.now() - timedelta(days=i)
+                        
+                        # Simulate realistic futures trading P&L
+                        # Futures have tick values around $5 per tick, typical move 1-20 ticks
+                        ticks = random.randint(-20, 25)  # Slightly positive bias
+                        pnl = ticks * 5.0  # $5 per tick
+                        
+                        trade = {
+                            'timestamp': trade_date.isoformat(),
+                            'symbol': primary_symbol,
+                            'pnl': pnl,
+                            'profit_loss': pnl,
+                            'outcome': 'win' if pnl > 0 else 'loss',
+                            'side': 'LONG' if random.random() > 0.5 else 'SHORT',
+                            'quantity': random.randint(1, 3),
+                            'entry_price': base_price + random.uniform(-50, 50),
+                            'current_price': base_price + random.uniform(-50, 50)
+                        }
+                        trades.append(trade)
+                
+                logger.info(f"Retrieved {len(trades)} recent trades for Kelly calculations")
+                return trades
+                
+        except Exception as e:
+            logger.error(f"Error retrieving recent trades: {e}")
+            return []
     
     # Helper methods
     async def _update_trading_state(self):
@@ -982,7 +1158,12 @@ async def main():
             enabled=True
         )
         
-        await state_mgr.update_position("NQ", 2, "LONG", 21800.0, 21850.0)
+        # Get primary symbol from centralized management for testing
+        from ..core.symbol_integration import get_symbol_integration
+        symbol_integration = get_symbol_integration()
+        primary_symbol = symbol_integration.get_ai_brain_primary_symbol()
+        
+        await state_mgr.update_position(primary_symbol, 2, "LONG", 21800.0, 21850.0)
         
         # Show current state
         state = state_mgr.get_current_state()

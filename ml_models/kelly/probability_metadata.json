@@ -1,0 +1,31 @@
+{
+  "timestamp": "2025-07-26T20:31:43.259977",
+  "config": {
+    "n_estimators": 100,
+    "max_depth": 6,
+    "learning_rate": 0.1,
+    "min_samples_leaf": 20,
+    "calibration_bins": 10,
+    "confidence_threshold": 0.55
+  },
+  "feature_names": [
+    "price_ma5_ratio",
+    "price_ma20_ratio",
+    "volatility_5d",
+    "volatility_20d",
+    "volatility_ratio",
+    "momentum_5",
+    "momentum_10",
+    "volume_ratio",
+    "signal_confidence",
+    "signal_direction",
+    "rsi",
+    "macd",
+    "bb_position",
+    "hour_normalized",
+    "is_market_hours",
+    "trend_consistency",
+    "signal_to_noise"
+  ],
+  "feature_importance": {
+    "price_ma5_ratio": 

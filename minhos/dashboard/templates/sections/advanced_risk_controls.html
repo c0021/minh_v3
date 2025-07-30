@@ -1,0 +1,145 @@
+<!-- Advanced Risk Controls Panel Section -->
+<div class="risk-controls-section dashboard-section" style="background: linear-gradient(135deg, #2e1a1a 0%, #1a1a2e 100%); border-left: 4px solid #f44336; margin-bottom: 30px;">
+    <h2 style="color: #f44336; margin-bottom: 20px;">🛡️ ADVANCED RISK CONTROLS - CIRCUIT BREAKER SYSTEM</h2>
+    
+    <!-- Risk Status Overview -->
+    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <div class="status-card risk-card">
+            <h3>🚨 Circuit Breaker</h3>
+            <div class="status-value" id="circuit-breaker-status" style="color: #4caf50;">ARMED</div>
+            <div class="status-label">Protection Active</div>
+        </div>
+        <div class="status-card risk-card">
+            <h3>📊 Risk Budget Used</h3>
+            <div class="status-value" id="risk-budget-used">0%</div>
+            <div class="status-label">Daily Allocation</div>
+        </div>
+        <div class="status-card risk-card">
+            <h3>⚖️ Position Size</h3>
+            <div class="status-value" id="current-position-size">1</div>
+            <div class="status-label">Contracts</div>
+        </div>
+        <div class="status-card risk-card">
+            <h3>📉 Max Drawdown</h3>
+            <div class="status-value" id="max-drawdown">0%</div>
+            <div class="status-label">Today</div>
+        </div>
+    </div>
+    
+    <!-- Risk Management Dashboard -->
+    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Circuit Breaker Controls -->
+        <div class="panel">
+            <h2>⚡ Circuit Breaker Management</h2>
+            
+            <!-- Emergency Controls -->
+            <div class="emergency-controls" style="margin-bottom: 20px; padding: 15px; background: rgba(244, 67, 54, 0.1); border-radius: 8px; border: 1px solid #f44336;">
+                <button onclick="triggerEmergencyStop()" 
+                        style="width: 100%; background: #f44336; color: white; border: none; padding: 15px; border-radius: 4px; font-size: 16px; font-weight: bold; margin-bottom: 10px;">
+                    🚨 EMERGENCY STOP - HALT ALL TRADING
+                </button>
+                <div style="font-size: 12px; color: #a0a0a0; text-align: center;">
+                    Immediately stops all trading and closes positions
+                </div>
+            </div>
+            
+            <!-- Risk Parameters -->
+            <div class="risk-parameter" style="margin-bottom: 15px;">
+                <label style="color: #e0e0e0; margin-bottom: 5px; display: block;">Daily Loss Limit:</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="range" id="daily-loss-limit" min="1" max="10" value="5" style="flex: 1;">
+                    <span style="color: #f44336; font-weight: bold;"><span id="loss-limit-value">5</span>%</span>
+                </div>
+            </div>
+            
+            <div class="risk-parameter" style="margin-bottom: 15px;">
+                <label style="color: #e0e0e0; margin-bottom: 5px; display: block;">Max Position Size:</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="range" id="max-position-size" min="1" max="5" value="2" style="flex: 1;">
+                    <span style="color: #f44336; font-weight: bold;"><span id="position-size-value">2</span> contracts</span>
+                </div>
+            </div>
+            
+            <div class="risk-parameter" style="margin-bottom: 15px;">
+                <label style="color: #e0e0e0; margin-bottom: 5px; display: block;">Volatility Threshold:</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="range" id="volatility-threshold" min="10" max="50" value="25" style="flex: 1;">
+                    <span style="color: #f44336; font-weight: bold;"><span id="volatility-value">25</span>%</span>
+                </div>
+            </div>
+            
+            <!-- Circuit Breaker Status -->
+            <div id="circuit-breaker-details" style="background: #0a0a0a; border: 1px solid #f44336; border-radius: 6px; padding: 12px; margin-top: 15px;">
+                <div style="color: #f44336; font-weight: bold; margin-bottom: 8px;">Circuit Breaker Status</div>
+                <div style="font-size: 13px; color: #e0e0e0; margin-bottom: 3px;">
+                    ✅ Daily loss limit not exceeded
+                </div>
+                <div style="font-size: 13px; color: #e0e0e0; margin-bottom: 3px;">
+                    ✅ Position size within limits
+                </div>
+                <div style="font-size: 13px; color: #e0e0e0;">
+                    ✅ Market volatility acceptable
+                </div>
+            </div>
+        </div>
+        
+        <!-- Real-Time Risk Monitoring -->
+        <div class="panel">
+            <h2>📊 Real-Time Risk Monitoring</h2>
+            
+            <!-- Risk Metrics -->
+            <div class="risk-metric" style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="color: #e0e0e0;">Portfolio Heat</span>
+                    <span style="color: #f44336; font-weight: bold;" id="portfolio-heat">Low</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px;">
+                    <div id="portfolio-heat-bar" style="width: 25%; height: 100%; background: #4caf50; border-radius: 4px;"></div>
+                </div>
+            </div>
+            
+            <div class="risk-metric" style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="color: #e0e0e0;">Market Stress Level</span>
+                    <span style="color: #f44336; font-weight: bold;" id="stress-level">Normal</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px;">
+                    <div id="stress-level-bar" style="width: 30%; height: 100%; background: #4caf50; border-radius: 4px;"></div>
+                </div>
+            </div>
+            
+            <div class="risk-metric" style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="color: #e0e0e0;">Correlation Risk</span>
+                    <span style="color: #f44336; font-weight: bold;" id="correlation-risk">Low</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px;">
+                    <div id="correlation-risk-bar" style="width: 20%; height: 100%; background: #4caf50; border-radius: 4px;"></div>
+                </div>
+            </div>
+            
+            <!-- Risk Alerts -->
+            <div style="background: rgba(244, 67, 54, 0.1); border: 1px solid #f44336; border-radius: 6px; padding: 12px; margin-top: 20px;">
+                <div style="color: #f44336; font-weight: bold; margin-bottom: 10px;">🚨 Active Risk Alerts</div>
+                <div id="risk-alerts-container">
+                    <div style="font-size: 13px; color: #4caf50; text-align: center; padding: 10px;">
+                        ✅ No active risk alerts
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Risk Actions -->
+            <div style="margin-top: 20px;">
+                <button onclick="runRiskStressTest()" 
+                        style="width: 100%; background: #ff9800; color: white; border: none; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                    🧪 Run Risk Stress Test
+                </button>
+                
+                <button onclick="viewRiskReport()" 
+                        style="width: 100%; background: #2196f3; color: white; border: none; padding: 10px; border-radius: 4px;">
+                    📋 Generate Risk Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

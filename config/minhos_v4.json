@@ -1,0 +1,123 @@
+{
+  "network": {
+    "bridge_host": "100.123.37.79",
+    "bridge_fallback_host": "marypc",
+    "bridge_fallback_ips": [
+      "172.21.128.1",
+      "100.64.0.1"
+    ],
+    "bridge_port": 8765,
+    "dashboard_port": 8888,
+    "web_api_port": 8000,
+    "market_data_ws_port": 9001,
+    "market_data_http_port": 9002,
+    "sierra_client_port": 9003,
+    "multi_chart_collector_port": 9004,
+    "live_trading_integration_port": 9005,
+    "redis_port": 6379,
+    "redis_url": "redis://localhost:6379/0",
+    "local_llm_port": 11434,
+    "local_llm_url": "http://localhost:11434",
+    "dashboard_host": "0.0.0.0",
+    "api_host": "0.0.0.0"
+  },
+  "timing": {
+    "general_connection_timeout": 10,
+    "http_client_timeout": 30,
+    "health_check_timeout": 10,
+    "market_data_fetch_timeout": 5,
+    "market_data_refresh_rate": 1.0,
+    "websocket_reconnect_delay": 5,
+    "market_data_streaming_interval": 1.0,
+    "model_update_interval": 3600,
+    "memory_cleanup_interval": 3600,
+    "service_status_update": 10000,
+    "critical_status_update": 5000,
+    "ai_transparency_update": 2000,
+    "decision_quality_update": 3000,
+    "max_retry_attempts": 3,
+    "retry_delay": 2,
+    "max_reconnect_attempts": 10,
+    "reconnect_delay": 5.0,
+    "decision_timeout_high": 1800,
+    "decision_timeout_medium": 3600,
+    "decision_timeout_low": 14400,
+    "decision_timeout_info": 86400
+  },
+  "trading": {
+    "minimum_confidence": 0.6,
+    "strong_signal_threshold": 0.8,
+    "autonomous_execution_threshold": 0.75,
+    "max_position_size": 1.0,
+    "max_daily_loss": 500.0,
+    "max_drawdown": 1000.0,
+    "assumed_account_value": 100000.0,
+    "trend_detection_threshold": 1.002,
+    "opposite_trend_threshold": 0.998,
+    "high_volatility_threshold": 0.02,
+    "medium_volatility_threshold": 0.01,
+    "minimum_volume_threshold": 100,
+    "trading_modes": [
+      "manual",
+      "semi_auto",
+      "full_auto"
+    ]
+  },
+  "symbols": {
+    "primary_symbol": "NQU25-CME",
+    "default_trade_symbol": "NQU25-CME",
+    "emergency_fallback_symbol": "NQU25-CME",
+    "supported_symbols": [
+      "NQU25-CME",
+      "ESU25-CME",
+      "EURUSD-FXCM",
+      "XAUUSD-FXCM",
+      "VXU25-CFE"
+    ],
+    "api_rate_limit": "1000/minute",
+    "max_memory_records_per_symbol": 1000,
+    "message_queue_size": 1000,
+    "websocket_max_message_size": 10485760
+  },
+  "ai": {
+    "anthropic_model": "claude-3-haiku-20240307",
+    "max_tokens": 1000,
+    "market_data_buffer_size": 1000,
+    "pattern_memory_size": 10000,
+    "published_events_limit": 1000,
+    "pattern_history_limit": 1000,
+    "market_data_history_buffer": 1000,
+    "order_history_buffer": 1000,
+    "analysis_window_minutes": 60,
+    "pattern_confidence_threshold": 0.7,
+    "ensemble_model_count": 4
+  },
+  "system": {
+    "max_file_size": 10485760,
+    "queue_max_size": 1000,
+    "log_level": "INFO",
+    "log_rotation_size": "10MB",
+    "log_retention_days": 30,
+    "sqlite_timeout": 30,
+    "sqlite_check_same_thread": false,
+    "worker_threads": 4,
+    "async_pool_size": 10
+  },
+  "ui": {
+    "color_critical": "#ff4444",
+    "color_warning": "#ffaa00",
+    "color_info": "#44aaff",
+    "color_success": "#44ff44",
+    "color_error": "#f44336",
+    "color_warning_alt": "#ff9800",
+    "color_info_alt": "#2196f3",
+    "color_success_alt": "#4caf50",
+    "ai_transparency_theme": "#1e3a8a",
+    "decision_quality_theme": "#ea580c",
+    "chat_interface_theme": "#16a34a",
+    "rollover_alerts_theme": "#7c3aed",
+    "dashboard_columns": 3,
+    "section_padding": 15,
+    "widget_spacing": 10
+  }
+}

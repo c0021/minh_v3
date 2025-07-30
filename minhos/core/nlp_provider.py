@@ -107,7 +107,11 @@ class NLPProviderManager:
                     self.logger.warning(f"Provider {provider_name} availability check failed: {e}")
                     self.provider_stats["failures_by_provider"][provider_name] += 1
         
-        raise NoAvailableProviderError("No NLP providers are currently available")
+        # If no providers are available, create and return an emergency fallback
+        self.logger.warning("No NLP providers available, using emergency fallback")
+        from .providers.emergency_fallback_provider import EmergencyFallbackProvider
+        emergency_provider = EmergencyFallbackProvider()
+        return emergency_provider
     
     async def parse_intent(self, user_input: str, context: Dict[str, Any] = None) -> ParsedIntent:
         """Parse intent using the first available provider."""
@@ -193,6 +197,12 @@ class NLPProviderManager:
     
     def _update_provider_stats(self, provider_name: str, processing_time: float, success: bool):
         """Update provider usage statistics."""
+        # Initialize stats for provider if not exists (for emergency fallback)
+        if provider_name not in self.provider_stats["requests_by_provider"]:
+            self.provider_stats["requests_by_provider"][provider_name] = 0
+            self.provider_stats["failures_by_provider"][provider_name] = 0
+            self.provider_stats["response_times"][provider_name] = []
+        
         self.provider_stats["requests_by_provider"][provider_name] += 1
         self.provider_stats["last_used"][provider_name] = datetime.utcnow().isoformat()
         

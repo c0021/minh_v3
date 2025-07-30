@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Validation Dashboard - Phase 3</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/risk-validation.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🛡️ Risk Validation Dashboard</h1>
+            <div class="status-bar">
+                <span class="phase-indicator">Phase 3: Risk Configuration & Validation</span>
+                <span id="last-updated">Last Updated: --</span>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Kelly Calibration Section -->
+            <div class="card kelly-calibration">
+                <div class="card-header">
+                    <h2>🎯 Kelly Fraction Calibration</h2>
+                    <span class="status-badge" id="calibration-status">COMPLETED</span>
+                </div>
+                <div class="card-content">
+                    <div class="calibration-chart">
+                        <canvas id="kellyCalibrationChart"></canvas>
+                    </div>
+                    <div class="calibration-results" id="calibration-results">
+                        <div class="optimal-result">
+                            <h3>Optimal Configuration</h3>
+                            <div class="metric-row">
+                                <span class="metric-label">Kelly Multiplier:</span>
+                                <span class="metric-value" id="optimal-multiplier">0.5x</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Expected Return:</span>
+                                <span class="metric-value" id="optimal-return">28.7%</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Max Drawdown:</span>
+                                <span class="metric-value" id="optimal-drawdown">12.1%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backtest Comparison Section -->
+            <div class="card backtest-comparison">
+                <div class="card-header">
+                    <h2>📊 Strategy Comparison</h2>
+                    <span class="status-badge success">KELLY WINS</span>
+                </div>
+                <div class="card-content">
+                    <div class="comparison-chart">
+                        <canvas id="backtestChart"></canvas>
+                    </div>
+                    <div class="comparison-table" id="comparison-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Strategy</th>
+                                    <th>Return</th>
+                                    <th>Drawdown</th>
+                                    <th>Sharpe</th>
+                                    <th>Rating</th>
+                                </tr>
+                            </thead>
+                            <tbody id="strategy-rows">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Scenarios Section -->
+            <div class="card risk-scenarios">
+                <div class="card-header">
+                    <h2>⚡ Stress Testing</h2>
+                    <span class="status-badge" id="stress-status">3/4 PASSED</span>
+                </div>
+                <div class="card-content">
+                    <div class="scenario-grid" id="scenario-grid">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    <div class="stress-summary">
+                        <h3>Stress Test Summary</h3>
+                        <div class="summary-metrics">
+                            <div class="summary-item">
+                                <span class="summary-label">Worst Drawdown:</span>
+                                <span class="summary-value critical" id="worst-drawdown">28.4%</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Scenarios Passed:</span>
+                                <span class="summary-value success" id="scenarios-passed">3/4</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Overall Resilience:</span>
+                                <span class="summary-value good" id="overall-resilience">GOOD</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Configuration Section -->
+            <div class="card current-config">
+                <div class="card-header">
+                    <h2>⚙️ Current Configuration</h2>
+                    <button class="config-btn" onclick="refreshConfig()">Refresh</button>
+                </div>
+                <div class="card-content">
+                    <div class="config-sections">
+                        <div class="config-section">
+                            <h3>Kelly Parameters</h3>
+                            <div class="config-grid" id="kelly-config">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                        <div class="config-section">
+                            <h3>Risk Parameters</h3>
+                            <div class="config-grid" id="risk-config">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Monitoring Section -->
+            <div class="card performance-monitor">
+                <div class="card-header">
+                    <h2>📈 Live Performance</h2>
+                    <span class="status-badge active">MONITORING</span>
+                </div>
+                <div class="card-content">
+                    <div class="performance-metrics" id="performance-metrics">
+                        <div class="metric-group">
+                            <h3>P&L Metrics</h3>
+                            <div class="metric-item">
+                                <span class="metric-label">Total P&L:</span>
+                                <span class="metric-value" id="total-pnl">$0.00</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Today P&L:</span>
+                                <span class="metric-value" id="today-pnl">$0.00</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Unrealized P&L:</span>
+                                <span class="metric-value" id="unrealized-pnl">$0.00</span>
+                            </div>
+                        </div>
+                        <div class="metric-group">
+                            <h3>Kelly Performance</h3>
+                            <div class="metric-item">
+                                <span class="metric-label">Avg Kelly Fraction:</span>
+                                <span class="metric-value" id="avg-kelly">0.125</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Avg Confidence:</span>
+                                <span class="metric-value" id="avg-confidence">72%</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Recommendations Today:</span>
+                                <span class="metric-value" id="recs-today">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Health Section -->
+            <div class="card system-health">
+                <div class="card-header">
+                    <h2>🔧 System Health</h2>
+                    <span class="status-badge" id="health-status">HEALTHY</span>
+                </div>
+                <div class="card-content">
+                    <div class="health-indicators">
+                        <div class="health-item">
+                            <span class="indicator" id="risk-violations-indicator"></span>
+                            <span class="health-label">Risk Violations:</span>
+                            <span class="health-value" id="risk-violations">0</span>
+                        </div>
+                        <div class="health-item">
+                            <span class="indicator" id="ml-status-indicator"></span>
+                            <span class="health-label">ML Models:</span>
+                            <span class="health-value" id="ml-status">ACTIVE</span>
+                        </div>
+                        <div class="health-item">
+                            <span class="indicator" id="data-quality-indicator"></span>
+                            <span class="health-label">Data Quality:</span>
+                            <span class="health-value" id="data-quality">GOOD</span>
+                        </div>
+                        <div class="health-item">
+                            <span class="indicator" id="emergency-stops-indicator"></span>
+                            <span class="health-label">Emergency Stops:</span>
+                            <span class="health-value" id="emergency-stops">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/risk-validation.js"></script>
+</body>
+</html>

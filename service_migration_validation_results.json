@@ -1,0 +1,57 @@
+{
+  "migration_validation": {
+    "success": false,
+    "all_services_migrated": false,
+    "migration_status": {
+      "sierra_client": false,
+      "trading_engine": false,
+      "risk_manager": false,
+      "state_manager": false,
+      "dashboard": false
+    },
+    "symbol_consistency": {
+      "primary_in_trading": true,
+      "primary_in_bridge": true,
+      "primary_in_dashboard": true,
+      "primary_in_sierra": true
+    },
+    "rollover_system_working": false,
+    "integration_functions_working": true,
+    "function_results": {
+      "ai_brain_primary": "\u2705 Working",
+      "trading_engine_symbols": "\u2705 Working",
+      "sierra_client_symbols": "\u2705 Working",
+      "dashboard_symbols": "\u2705 Working",
+      "bridge_symbols": "\u2705 Working"
+    },
+    "config_integrity": false,
+    "no_hard_coded_symbols": true,
+    "hard_coded_found": {},
+    "summary": {
+      "total_services": 5,
+      "migrated_services": 0,
+      "rollover_alerts": 2,
+      "integration_functions_tested": 5,
+      "files_checked": 5
+    }
+  },
+  "workflow_validation": {
+    "success": true,
+    "workflow_result": {
+      "primary_symbol": "NQU25-CME",
+      "is_tradeable": true,
+      "is_bridge_available": true,
+      "needs_rollover": false
+    },
+    "chain_test": {
+      "bridge_provides_symbol": true,
+      "sierra_can_subscribe": true,
+      "state_manager_aware": true,
+      "trading_engine_accepts": true,
+      "risk_manager_validates": true
+    },
+    "chain_success": true
+  },
+  "overall_success": false,
+  "timestamp": "358956.763533175"
+}

@@ -18,9 +18,16 @@ All services are designed to work together seamlessly in a Linux environment
 with proper error handling, logging, and performance monitoring.
 """
 
-from .sierra_client import SierraClient, get_sierra_client
+# Consolidated market data service
+from .market_data_service import (
+    MarketDataService, 
+    SierraChartRecord,
+    MultiChartData,
+    get_market_data_service,
+    get_sierra_client,  # Legacy compatibility
+    get_sierra_historical_service  # Legacy compatibility
+)
 from ..models.market import MarketData
-from .market_data import MarketDataService, get_market_data_service
 from .web_api import WebAPIService, get_web_api_service
 from .state_manager import (
     StateManager, 
@@ -36,6 +43,8 @@ from .ai_brain_service import (
     TradingSignal, 
     SignalType, 
     MarketAnalysis,
+    DetectedPattern,
+    PatternType,
     get_ai_brain_service,
     get_ai_status  # Legacy compatibility
 )
@@ -46,12 +55,18 @@ from .trading_engine import (
     TradingDecision,
     get_trading_engine
 )
-from .pattern_analyzer import (
-    PatternAnalyzer,
-    PatternType,
-    DetectedPattern,
-    get_pattern_analyzer
-)
+# Pattern analyzer functionality now integrated into ai_brain_service
+# from .pattern_analyzer import (
+#     PatternAnalyzer,
+#     PatternType,
+#     DetectedPattern,
+#     get_pattern_analyzer
+# )
+
+# Legacy compatibility for pattern analyzer
+def get_pattern_analyzer():
+    """Legacy compatibility - pattern analysis now part of AI brain service"""
+    return get_ai_brain_service()
 from .risk_manager import (
     RiskManager,
     RiskLevel,
@@ -59,11 +74,12 @@ from .risk_manager import (
     RiskViolation,
     get_risk_manager
 )
-from .sierra_historical_data import (
-    SierraHistoricalDataService,
-    SierraChartRecord,
-    get_sierra_historical_service
-)
+# Sierra historical data now part of market_data_service
+# from .sierra_historical_data import (
+#     SierraHistoricalDataService,
+#     SierraChartRecord,
+#     get_sierra_historical_service
+# )
 
 # Version information
 __version__ = "3.0.0"
@@ -72,15 +88,14 @@ __description__ = "Linux-native trading system services"
 
 # Service registry for easy access
 SERVICES = {
-    'sierra_client': get_sierra_client,
-    'market_data': get_market_data_service,
+    'market_data': get_market_data_service,  # Consolidated service
+    'sierra_client': get_sierra_client,  # Legacy compatibility -> market_data
+    'sierra_historical': get_sierra_historical_service,  # Legacy -> market_data
     'web_api': get_web_api_service,
     'state_manager': get_state_manager,
     'ai_brain': get_ai_brain_service,
     'trading_engine': get_trading_engine,
-    'pattern_analyzer': get_pattern_analyzer,
-    'risk_manager': get_risk_manager,
-    'sierra_historical': get_sierra_historical_service
+    'risk_manager': get_risk_manager
 }
 
 def get_service(service_name: str):
@@ -97,16 +112,17 @@ def list_services():
 # Export all public components
 __all__ = [
     # Core services
-    'SierraClient', 'MarketDataService', 'WebAPIService', 'StateManager',
-    'AIBrainService', 'TradingEngine', 'PatternAnalyzer', 'RiskManager',
+    'MarketDataService', 'WebAPIService', 'StateManager',
+    'AIBrainService', 'TradingEngine', 'RiskManager',
     
     # Service getters
-    'get_sierra_client', 'get_market_data_service', 'get_web_api_service',
-    'get_state_manager', 'get_ai_brain_service', 'get_trading_engine',
-    'get_pattern_analyzer', 'get_risk_manager',
+    'get_market_data_service', 'get_sierra_client', 'get_sierra_historical_service',
+    'get_web_api_service', 'get_state_manager', 'get_ai_brain_service', 
+    'get_trading_engine', 'get_risk_manager', 'get_pattern_analyzer',
     
     # Data classes and enums
-    'MarketData', 'TradingState', 'SystemState', 'Position', 'RiskParameters',
+    'MarketData', 'SierraChartRecord', 'MultiChartData',
+    'TradingState', 'SystemState', 'Position', 'RiskParameters',
     'SystemConfig', 'TradingSignal', 'SignalType', 'MarketAnalysis',
     'DecisionPriority', 'MarketRegime', 'TradingDecision', 'PatternType',
     'DetectedPattern', 'RiskLevel', 'TradeRequest', 'RiskViolation',

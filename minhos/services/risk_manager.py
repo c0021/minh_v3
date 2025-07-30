@@ -21,11 +21,18 @@ import json
 import sqlite3
 
 # Import other services
+from minhos.core.base_service import BaseService
 from .state_manager import get_state_manager, TradingState, SystemState, Position, RiskParameters
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("risk_manager")
+
+def json_serializer(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 class RiskLevel(Enum):
     LOW = "LOW"
@@ -79,7 +86,7 @@ class RiskLimits:
     max_orders_per_minute: int
     volatility_multiplier: float = 1.0
 
-class RiskManager:
+class RiskManager(BaseService):
     """
     Comprehensive risk management system for MinhOS v3
     All trades must pass through this system for validation
@@ -87,6 +94,7 @@ class RiskManager:
     
     def __init__(self, db_path: str = None):
         """Initialize Risk Manager"""
+        super().__init__("RiskManager")
         if db_path is None:
             # Move to permanent location in data directory
             project_root = Path(__file__).parent.parent.parent
@@ -99,6 +107,13 @@ class RiskManager:
         
         # Service references
         self.state_manager = None
+        
+        # Centralized symbol management integration
+        from ..core.symbol_integration import get_symbol_integration
+        self.symbol_integration = get_symbol_integration()
+        
+        # Mark service as migrated to centralized symbol management
+        self.symbol_integration.mark_service_migrated('risk_manager')
         
         # Risk state
         self.circuit_breaker_active = False
@@ -253,6 +268,10 @@ class RiskManager:
             violations = []
             risk_score = 0.0
             
+            # Validate symbol against centralized management
+            symbol_violations = await self._validate_symbol(trade_request.symbol)
+            violations.extend(symbol_violations)
+            
             # CRITICAL: Check if risk management is properly configured
             if not await self._validate_risk_configuration():
                 violations.append("CRITICAL: Risk parameters not configured or invalid")
@@ -353,6 +372,41 @@ class RiskManager:
             violations.append(f"SYSTEM ERROR: Risk validation failed - {str(e)}")
             self.risk_metrics["orders_blocked"] += 1
             return False, violations
+    
+    async def validate_trade(self, order, signal=None) -> bool:
+        """
+        Validate trade order (compatibility method for TradingService)
+        
+        Args:
+            order: TradeOrder object from trading service
+            signal: Optional TradingSignal object
+            
+        Returns:
+            bool: True if trade is approved, False if rejected
+        """
+        try:
+            # Convert TradeOrder to TradeRequest for internal validation
+            trade_request = TradeRequest(
+                symbol=order.symbol,
+                order_type=OrderType(order.side),  # BUY, SELL, CLOSE
+                quantity=order.quantity,
+                price=order.price or 0.0,
+                stop_loss=order.stop_price,
+                take_profit=None,  # Not provided in TradeOrder
+                reason=order.reason or "Trading service order"
+            )
+            
+            # Use existing comprehensive validation
+            is_approved, violations = await self.validate_trade_request(trade_request)
+            
+            if not is_approved:
+                logger.warning(f"Trade rejected by risk manager: {', '.join(violations)}")
+            
+            return is_approved
+            
+        except Exception as e:
+            logger.error(f"Trade validation error: {e}")
+            return False
     
     async def _validate_risk_configuration(self) -> bool:
         """Validate that risk parameters are properly configured"""
@@ -611,6 +665,45 @@ class RiskManager:
         
         return violations, risk_score
     
+    async def _validate_symbol(self, symbol: str) -> List[str]:
+        """Validate symbol against centralized management"""
+        violations = []
+        
+        try:
+            # Check if symbol is in tradeable symbols list
+            tradeable_symbols = self.symbol_integration.get_trading_engine_symbols()
+            if symbol not in tradeable_symbols:
+                violations.append(f"Symbol {symbol} not in approved tradeable symbols list")
+                
+                await self._record_violation(
+                    RiskLevel.HIGH,
+                    f"Invalid symbol for trading: {symbol}",
+                    {"symbol": symbol, "tradeable_symbols": tradeable_symbols},
+                    "symbol_validation",
+                    "Use only symbols from centralized management system"
+                )
+            
+            # Check if symbol requires rollover attention
+            rollover_status = self.symbol_integration.check_rollover_status()
+            if rollover_status.get('needs_attention', False):
+                urgent_rollovers = rollover_status.get('urgent_rollovers', [])
+                if symbol in [alert['current_symbol'] for alert in urgent_rollovers]:
+                    violations.append(f"Symbol {symbol} requires rollover attention - trading may be risky")
+                    
+                    await self._record_violation(
+                        RiskLevel.MEDIUM,
+                        f"Symbol rollover warning: {symbol}",
+                        {"symbol": symbol, "rollover_status": rollover_status},
+                        "rollover_warning",
+                        "Consider rolling to next contract before trading"
+                    )
+            
+        except Exception as e:
+            logger.error(f"Symbol validation error: {e}")
+            violations.append(f"Cannot validate symbol {symbol}: {str(e)}")
+        
+        return violations
+    
     async def _validate_correlation_limits(self, trade_request: TradeRequest) -> Tuple[List[str], float]:
         """Validate correlation limits between positions"""
         violations = []
@@ -671,7 +764,7 @@ class RiskManager:
                     violation.timestamp.isoformat(),
                     level.value,
                     message,
-                    json.dumps(details),
+                    json.dumps(details, default=json_serializer),
                     rule_type,
                     recommendation
                 ))
@@ -1037,6 +1130,95 @@ class RiskManager:
             issues.append(f"Safety validation failed: {str(e)}")
             return False, issues
 
+    async def health_check(self) -> bool:
+        """
+        Health check method for TradingService compatibility
+        
+        Returns:
+            bool: True if risk manager is healthy, False otherwise
+        """
+        try:
+            # Check if service is running
+            if not getattr(self, '_running', False):
+                return False
+            
+            # Check if database is accessible
+            if self.db_path and not self.db_path.exists():
+                return False
+            
+            # Check if state manager is available
+            if not self.state_manager:
+                return False
+            
+            # Check for emergency conditions
+            if self.emergency_mode or self.circuit_breaker_active:
+                return False
+            
+            # Check for excessive recent violations
+            recent_critical = len([v for v in self.violations 
+                                 if v.level in [RiskLevel.CRITICAL, RiskLevel.EMERGENCY] and
+                                 (datetime.now() - v.timestamp).total_seconds() < 300])
+            
+            if recent_critical > 5:  # More than 5 critical violations in 5 minutes
+                return False
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Health check error: {e}")
+            return False
+
+    # Abstract method implementations for BaseService
+    async def _initialize(self):
+        """Initialize service-specific components"""
+        # Get state manager reference
+        self.state_manager = get_state_manager()
+        
+        # Initialize database
+        self.db_path.parent.mkdir(exist_ok=True)
+        await self._setup_database()
+        
+        logger.info("Risk Manager initialized")
+    
+    async def _start_service(self):
+        """Start service-specific functionality"""
+        # Start monitoring loops
+        if self.running:
+            asyncio.create_task(self._position_monitoring_loop())
+            asyncio.create_task(self._risk_calculation_loop()) 
+            asyncio.create_task(self._violation_cleanup_loop())
+            asyncio.create_task(self._daily_summary_loop())
+        
+        logger.info("Risk Manager service started")
+    
+    async def _stop_service(self):
+        """Stop service-specific functionality"""
+        self.running = False
+        logger.info("Risk Manager service stopped")
+    
+    async def _cleanup(self):
+        """Cleanup service resources"""
+        # Clear violations and reset state
+        self.violations.clear()
+        self.order_history.clear()
+        self.order_timestamps.clear()
+        
+        logger.info("Risk Manager cleanup completed")
+
+    async def _setup_database(self):
+        """Setup risk management database"""
+        try:
+            # Create database connection and tables
+            # This is a simplified setup - full implementation would create proper tables
+            if not self.db_path.exists():
+                self.db_path.parent.mkdir(parents=True, exist_ok=True)
+                self.db_path.touch()
+            
+            logger.info(f"Risk database setup at {self.db_path}")
+            
+        except Exception as e:
+            logger.error(f"Database setup error: {e}")
+
 # Global risk manager instance
 _risk_manager: Optional[RiskManager] = None
 
@@ -1064,9 +1246,13 @@ async def main():
     try:
         await risk_mgr.start()
         
-        # Test trade validation
+        # Test trade validation with dynamic symbol from centralized management
+        from ..core.symbol_integration import get_symbol_integration
+        symbol_integration = get_symbol_integration()
+        primary_symbol = symbol_integration.get_ai_brain_primary_symbol()
+        
         test_trade = TradeRequest(
-            symbol="NQ",
+            symbol=primary_symbol,
             order_type=OrderType.BUY,
             quantity=2,
             price=21850.0,

@@ -1,0 +1,47 @@
+<!-- Migration Banner Component -->
+<div id="migration-banner" class="migration-banner" style="background: linear-gradient(135deg, #1a2e1a 0%, #2d1b69 100%); border: 2px solid #4caf50; border-radius: 8px; padding: 20px; margin-bottom: 30px; text-align: center;">
+    <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 15px;">
+        <div style="font-size: 32px;">🚀</div>
+        <div>
+            <h3 style="color: #4caf50; margin: 0;">NEW: MinhOS v4 Enhanced Dashboard Available!</h3>
+            <p style="color: #e0e0e0; margin: 5px 0 0 0; font-size: 14px;">Experience autonomous trading, pattern learning, and advanced risk controls</p>
+        </div>
+    </div>
+    
+    <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 15px;">
+        <button onclick="tryEnhancedDashboard()" 
+                style="background: #4caf50; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px;">
+            🎯 Try Enhanced Dashboard
+        </button>
+        <button onclick="dismissMigrationBanner()" 
+                style="background: #666; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer;">
+            Maybe Later
+        </button>
+    </div>
+    
+    <div style="font-size: 12px; color: #a0a0a0;">
+        ✨ New Features: Autonomous AI execution • Pattern learning visualization • 20X historical data • Advanced risk controls
+    </div>
+</div>
+
+<script>
+function tryEnhancedDashboard() {
+    // Set preference for enhanced dashboard
+    localStorage.setItem('preferEnhancedDashboard', 'true');
+    // Redirect to enhanced dashboard
+    window.location.href = '/enhanced';
+}
+
+function dismissMigrationBanner() {
+    // Hide banner for this session
+    document.getElementById('migration-banner').style.display = 'none';
+    sessionStorage.setItem('migrationBannerDismissed', 'true');
+}
+
+// Show banner only if not dismissed and not already on enhanced dashboard
+if (sessionStorage.getItem('migrationBannerDismissed') || 
+    localStorage.getItem('preferEnhancedDashboard') === 'true' ||
+    window.location.pathname.includes('enhanced')) {
+    document.getElementById('migration-banner').style.display = 'none';
+}
+</script>

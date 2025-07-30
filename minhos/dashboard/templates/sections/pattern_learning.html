@@ -1,0 +1,88 @@
+<!-- Pattern Learning Visualization Section -->
+<div class="pattern-learning-section dashboard-section" style="background: linear-gradient(135deg, #2e1a2e 0%, #1a1a2e 100%); border-left: 4px solid #9c27b0; margin-bottom: 30px;">
+    <h2 style="color: #9c27b0; margin-bottom: 20px;">🧬 PATTERN LEARNING ENGINE - CONTINUOUS ADAPTATION</h2>
+    
+    <!-- Learning Summary -->
+    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <div class="status-card pattern-card">
+            <h3>📚 Patterns Learned</h3>
+            <div class="status-value" id="patterns-learned">0</div>
+            <div class="status-label">Total Library</div>
+        </div>
+        <div class="status-card pattern-card">
+            <h3>🎯 Success Rate</h3>
+            <div class="status-value" id="pattern-success-rate">0%</div>
+            <div class="status-label">Pattern Accuracy</div>
+        </div>
+        <div class="status-card pattern-card">
+            <h3>🔄 Learning Speed</h3>
+            <div class="status-value" id="learning-speed">0</div>
+            <div class="status-label">New/Day</div>
+        </div>
+        <div class="status-card pattern-card">
+            <h3>🌊 Market Regime</h3>
+            <div class="status-value" id="current-regime">Unknown</div>
+            <div class="status-label">Detected</div>
+        </div>
+    </div>
+    
+    <!-- Pattern Insights -->
+    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Recent Pattern Discoveries -->
+        <div class="panel">
+            <h2>🔍 Recent Pattern Discoveries</h2>
+            <div id="recent-patterns" style="max-height: 300px; overflow-y: auto;">
+                <div class="pattern-item" style="margin-bottom: 15px; padding: 10px; background: rgba(156, 39, 176, 0.1); border-radius: 6px; border-left: 3px solid #9c27b0;">
+                    <div style="font-weight: bold; color: #e0e0e0;">Morning Gap Fill Pattern</div>
+                    <div style="font-size: 12px; color: #a0a0a0; margin: 5px 0;">Discovered: 2 hours ago | Confidence: 87%</div>
+                    <div style="font-size: 13px; color: #b0b0b0;">Gaps >20 points filled 78% within first hour</div>
+                </div>
+                
+                <div class="pattern-item" style="margin-bottom: 15px; padding: 10px; background: rgba(156, 39, 176, 0.1); border-radius: 6px; border-left: 3px solid #9c27b0;">
+                    <div style="font-weight: bold; color: #e0e0e0;">Volume Surge Reversal</div>
+                    <div style="font-size: 12px; color: #a0a0a0; margin: 5px 0;">Discovered: 4 hours ago | Confidence: 82%</div>
+                    <div style="font-size: 13px; color: #b0b0b0;">3x volume spikes precede trend reversals 65% of time</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Learning Performance -->
+        <div class="panel">
+            <h2>📊 Learning Performance</h2>
+            <div class="learning-metric" style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="color: #e0e0e0;">Pattern Recognition Accuracy</span>
+                    <span style="color: #9c27b0; font-weight: bold;" id="pattern-accuracy">78%</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px;">
+                    <div style="width: 78%; height: 100%; background: #9c27b0; border-radius: 4px;"></div>
+                </div>
+            </div>
+            
+            <div class="learning-metric" style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="color: #e0e0e0;">Adaptation Speed</span>
+                    <span style="color: #9c27b0; font-weight: bold;" id="adaptation-speed">92%</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px;">
+                    <div style="width: 92%; height: 100%; background: #9c27b0; border-radius: 4px;"></div>
+                </div>
+            </div>
+            
+            <div class="learning-metric" style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="color: #e0e0e0;">Market Regime Detection</span>
+                    <span style="color: #9c27b0; font-weight: bold;" id="regime-accuracy">85%</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px;">
+                    <div style="width: 85%; height: 100%; background: #9c27b0; border-radius: 4px;"></div>
+                </div>
+            </div>
+            
+            <!-- Learning Controls -->
+            <button onclick="viewPatternLibrary()" style="width: 100%; background: #9c27b0; color: white; border: none; padding: 10px; border-radius: 4px; margin-top: 10px;">
+                📚 View Pattern Library
+            </button>
+        </div>
+    </div>
+</div>

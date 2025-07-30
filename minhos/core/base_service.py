@@ -163,7 +163,7 @@ class BaseService(ABC):
             True if stopped successfully, False otherwise
         """
         if self.status == ServiceStatus.STOPPED:
-            self.logger.warning("Service is already stopped")
+            self.logger.debug("Service is already stopped")
             return True
         
         self.logger.info(f"Stopping {self.name} service")

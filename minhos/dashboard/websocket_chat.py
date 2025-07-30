@@ -72,9 +72,18 @@ class ChatWebSocketManager:
                             context = self.chat_service.conversation_contexts[client_id]
                             history = context.get_recent_context(20)
                             await websocket.send_json({
-                                "type": "history",
+                                "type": "history",  
                                 "messages": history
                             })
+                    
+                    elif message_type == "get_suggestions":
+                        # Get smart command suggestions
+                        partial_command = message_data.get("partial_command", "")
+                        suggestions = await self.chat_service.get_smart_suggestions(client_id, partial_command)
+                        await websocket.send_json({
+                            "type": "suggestions",
+                            "data": suggestions
+                        })
                     
                 except json.JSONDecodeError:
                     # Handle plain text messages (fallback)

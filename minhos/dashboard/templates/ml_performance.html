@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Performance Dashboard - MinhOS v3</title>
+    
+    <!-- Base styles -->
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/ml-performance.css') }}">
+    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --ml-primary: #3b82f6;
+            --ml-secondary: #8b5cf6;
+            --ml-success: #10b981;
+            --ml-warning: #f59e0b;
+            --ml-danger: #ef4444;
+            --ml-info: #06b6d4;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <h1>🤖 MinhOS v3 - ML Performance</h1>
+        </div>
+        <div class="nav-links">
+            <a href="/">Dashboard</a>
+            <a href="/ml-performance" class="active">ML Performance</a>
+            <a href="/api/docs" target="_blank">API Docs</a>
+        </div>
+    </nav>
+
+    <div class="ml-performance-dashboard" id="ml-performance-dashboard">
+        <!-- Dashboard Header -->
+        <div class="ml-dashboard-header">
+            <div>
+                <h1 class="ml-dashboard-title">🤖 ML Performance Dashboard</h1>
+                <p class="ml-dashboard-subtitle">Real-time monitoring of LSTM, Ensemble, and Kelly Criterion systems</p>
+            </div>
+            <div class="ml-dashboard-controls">
+                <select id="ml-time-range" class="ml-time-range">
+                    <option value="1">Last Hour</option>
+                    <option value="6">Last 6 Hours</option>
+                    <option value="24" selected>Last 24 Hours</option>
+                    <option value="168">Last Week</option>
+                </select>
+                <button id="ml-refresh-btn" class="ml-refresh-btn">🔄 Refresh</button>
+                <div id="ml-last-refresh" class="text-sm text-gray-500"></div>
+            </div>
+        </div>
+
+        <!-- System Status Overview -->
+        <section class="dashboard-section">
+            <div id="ml-system-status">
+                <!-- System status will be populated by JavaScript -->
+                <div class="loading-placeholder">
+                    <div class="loading-spinner"></div>
+                    <p>Loading ML system status...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Current Performance Metrics -->
+        <section class="dashboard-section">
+            <h2 class="section-title">📊 Current Performance</h2>
+            <div id="ml-current-performance">
+                <!-- Current performance will be populated by JavaScript -->
+                <div class="loading-placeholder">
+                    <div class="loading-spinner"></div>
+                    <p>Loading performance metrics...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Model Accuracy Charts -->
+        <section class="dashboard-section">
+            <h2 class="section-title">🎯 Model Accuracy</h2>
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <canvas id="accuracy-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="confidence-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Predictions -->
+        <section class="dashboard-section">
+            <h2 class="section-title">📈 Recent Predictions</h2>
+            <div id="ml-recent-predictions">
+                <!-- Recent predictions will be populated by JavaScript -->
+                <div class="loading-placeholder">
+                    <div class="loading-spinner"></div>
+                    <p>Loading recent predictions...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Performance History Charts -->
+        <section class="dashboard-section">
+            <h2 class="section-title">📊 Performance History</h2>
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <h3>Prediction Accuracy Over Time</h3>
+                    <canvas id="accuracy-history-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Inference Latency</h3>
+                    <canvas id="latency-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Kelly Performance</h3>
+                    <canvas id="kelly-performance-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Model Agreement</h3>
+                    <canvas id="agreement-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- A/B Testing Results -->
+        <section class="dashboard-section">
+            <h2 class="section-title">🧪 A/B Testing Results</h2>
+            <div class="ab-testing-grid">
+                <div class="ab-test-card traditional">
+                    <div class="ab-test-header">
+                        <h3>📊 Traditional Signals</h3>
+                        <span class="test-status">Control Group</span>
+                    </div>
+                    <div class="ab-test-metrics">
+                        <div class="metric">
+                            <span class="value" id="traditional-win-rate">--</span>
+                            <span class="label">Win Rate</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value" id="traditional-sharpe">--</span>
+                            <span class="label">Sharpe Ratio</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value" id="traditional-drawdown">--</span>
+                            <span class="label">Max Drawdown</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ab-test-card ml-enhanced">
+                    <div class="ab-test-header">
+                        <h3>🤖 ML-Enhanced Signals</h3>
+                        <span class="test-status">Treatment Group</span>
+                    </div>
+                    <div class="ab-test-metrics">
+                        <div class="metric">
+                            <span class="value" id="ml-win-rate">--</span>
+                            <span class="label">Win Rate</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value" id="ml-sharpe">--</span>
+                            <span class="label">Sharpe Ratio</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value" id="ml-drawdown">--</span>
+                            <span class="label">Max Drawdown</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ab-test-card comparison">
+                    <div class="ab-test-header">
+                        <h3>📈 Performance Improvement</h3>
+                        <span class="test-status">ML vs Traditional</span>
+                    </div>
+                    <div class="ab-test-metrics">
+                        <div class="metric">
+                            <span class="value improvement" id="win-rate-improvement">--</span>
+                            <span class="label">Win Rate Δ</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value improvement" id="sharpe-improvement">--</span>
+                            <span class="label">Sharpe Ratio Δ</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value improvement" id="drawdown-improvement">--</span>
+                            <span class="label">Drawdown Δ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ML Health Check -->
+        <section class="dashboard-section">
+            <h2 class="section-title">🩺 ML Health Check</h2>
+            <div id="ml-health-check">
+                <!-- Health check results will be populated by JavaScript -->
+                <div class="loading-placeholder">
+                    <div class="loading-spinner"></div>
+                    <p>Running ML health diagnostics...</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Loading Styles -->
+    <style>
+        .loading-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0 0 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dashboard-section {
+            margin-bottom: 40px;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .chart-container h3 {
+            margin: 0 0 15px 0;
+            font-size: 16px;
+            color: #374151;
+        }
+
+        .ab-testing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .ab-test-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #e5e7eb;
+        }
+
+        .ab-test-card.traditional {
+            border-left-color: #06b6d4;
+        }
+
+        .ab-test-card.ml-enhanced {
+            border-left-color: #8b5cf6;
+        }
+
+        .ab-test-card.comparison {
+            border-left-color: #10b981;
+        }
+
+        .ab-test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .ab-test-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #1f2937;
+        }
+
+        .test-status {
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .ab-test-metrics {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+
+        .ab-test-metrics .metric {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .ab-test-metrics .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .ab-test-metrics .value.improvement {
+            color: #10b981;
+        }
+
+        .ab-test-metrics .label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .ab-testing-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', path='/js/ml-performance.js') }}"></script>
+    
+    <script>
+        // Additional chart initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize accuracy chart
+            const accuracyCtx = document.getElementById('accuracy-chart');
+            if (accuracyCtx) {
+                new Chart(accuracyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'LSTM Accuracy',
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            data: []
+                        }, {
+                            label: 'Ensemble Accuracy', 
+                            borderColor: '#06b6d4',
+                            backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                            data: []
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 1
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Initialize confidence chart
+            const confidenceCtx = document.getElementById('confidence-chart');
+            if (confidenceCtx) {
+                new Chart(confidenceCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['High Confidence', 'Medium Confidence', 'Low Confidence'],
+                        datasets: [{
+                            data: [30, 50, 20],
+                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
+                        }]
+                    },
+                    options: {
+                        responsive: true
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

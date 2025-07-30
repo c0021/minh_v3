@@ -9,6 +9,7 @@ Provides compatibility layer for existing services to use the unified market dat
 import asyncio
 from typing import Dict, List, Optional, Callable
 import logging
+from datetime import datetime
 
 from .market_data_store import get_market_data_store, MarketDataStore
 from ..models.market import MarketData
@@ -40,7 +41,7 @@ class MarketDataAdapter:
         """Get latest market data (sync)"""
         return self._store.get_latest(symbol)
     
-    def get_historical_data(self, symbol: str, limit: int = 1000) -> List[MarketData]:
+    def get_historical_data(self, symbol: str, limit: Optional[int] = 1000) -> List[MarketData]:
         """Get historical data (sync)"""
         return self._store.get_history(symbol, limit)
     
@@ -152,6 +153,37 @@ class MarketDataAdapter:
     def get_stats(self) -> Dict:
         """Get storage statistics"""
         return self._store.get_stats()
+    
+    def get_historical_range(self, symbol: str) -> Optional[tuple]:
+        """Get the historical data range for a symbol (start_date, end_date)"""
+        try:
+            # Get all historical data for the symbol to find range
+            historical_data = self.get_historical_data(symbol, limit=None)
+            
+            if not historical_data:
+                return None
+                
+            # Extract timestamps and find min/max
+            timestamps = []
+            for data in historical_data:
+                try:
+                    # Handle both string and float timestamps
+                    if isinstance(data.timestamp, str):
+                        # Skip string timestamps that can't be converted
+                        continue
+                    timestamps.append(float(data.timestamp))
+                except (ValueError, TypeError):
+                    continue
+                    
+            if timestamps:
+                start_date = datetime.fromtimestamp(min(timestamps))
+                end_date = datetime.fromtimestamp(max(timestamps))
+                return (start_date, end_date)
+            
+            return None
+        except Exception as e:
+            logger.error(f"Error getting historical range for {symbol}: {e}")
+            return None
 
 
 # Global adapter instance

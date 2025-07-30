@@ -1,0 +1,72 @@
+<!-- Autonomous Trading Dashboard Section -->
+<div class="autonomous-trading-section dashboard-section" style="background: linear-gradient(135deg, #1a2e1a 0%, #0f3460 100%); border-left: 4px solid #4caf50; margin-bottom: 30px;">
+    <h2 style="color: #4caf50; margin-bottom: 20px;">🤖 AUTONOMOUS AI TRADER - LIVE EXECUTION</h2>
+    
+    <!-- AI Executive Summary -->
+    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <div class="status-card autonomous-card">
+            <h3>🎯 Execution Status</h3>
+            <div class="status-value" id="autonomous-status">ACTIVE</div>
+            <div class="status-label" id="autonomous-mode">75%+ Confidence</div>
+        </div>
+        <div class="status-card autonomous-card">
+            <h3>⚡ Today's Executions</h3>
+            <div class="status-value" id="todays-executions">0</div>
+            <div class="status-label">AI Trades</div>
+        </div>
+        <div class="status-card autonomous-card">
+            <h3>🧠 Current Confidence</h3>
+            <div class="status-value" id="current-ai-confidence">0%</div>
+            <div class="status-label" id="confidence-status">Analyzing</div>
+        </div>
+        <div class="status-card autonomous-card">
+            <h3>📈 Success Rate</h3>
+            <div class="status-value" id="ai-success-rate">0%</div>
+            <div class="status-label">30-Day Average</div>
+        </div>
+    </div>
+    
+    <!-- Live AI Decision Stream -->
+    <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr; gap: 20px;">
+        <!-- Real-Time AI Thinking -->
+        <div class="panel ai-thinking-panel">
+            <h2>🔥 LIVE AI REASONING STREAM</h2>
+            <div id="ai-decision-stream" style="background: #0a0a0a; border: 1px solid #4caf50; border-radius: 8px; padding: 15px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 14px;">
+                <div class="ai-thought" style="margin-bottom: 10px; padding: 8px; background: rgba(76, 175, 80, 0.1); border-left: 3px solid #4caf50;">
+                    <div style="color: #4caf50; font-weight: bold;">[AI BRAIN] Market Analysis Complete</div>
+                    <div style="color: #e0e0e0;">NQU25-CME: $23,442.50 | Trend: Strong Up | Confidence: 82%</div>
+                </div>
+                <div class="ai-thought" style="margin-bottom: 10px; padding: 8px; background: rgba(76, 175, 80, 0.1); border-left: 3px solid #4caf50;">
+                    <div style="color: #4caf50; font-weight: bold;">[RISK MGR] Position Validation</div>
+                    <div style="color: #e0e0e0;">Size: 1 contract | Risk: 2.1% | Circuit Breaker: Clear</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Execution Controls -->
+        <div class="panel autonomous-controls">
+            <h2>⚙️ AI Controls</h2>
+            <div class="control-item" style="margin-bottom: 15px;">
+                <label style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="autonomous-enabled" checked>
+                    <span style="color: #e0e0e0;">Autonomous Execution</span>
+                </label>
+                <div style="font-size: 12px; color: #a0a0a0; margin-top: 5px;">Execute trades at 75%+ confidence</div>
+            </div>
+            
+            <div class="control-item" style="margin-bottom: 15px;">
+                <label style="color: #e0e0e0;">Confidence Threshold:</label>
+                <input type="range" id="confidence-threshold" min="50" max="90" value="75" style="width: 100%; margin: 5px 0;">
+                <div style="font-size: 12px; color: #a0a0a0;"><span id="threshold-value">75</span>% minimum</div>
+            </div>
+            
+            <button onclick="pauseAutonomousTrading()" style="width: 100%; background: #ff9800; color: white; border: none; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                ⏸️ Pause AI Trading
+            </button>
+            
+            <button onclick="viewAILog()" style="width: 100%; background: #2196f3; color: white; border: none; padding: 10px; border-radius: 4px;">
+                📋 View Full AI Log
+            </button>
+        </div>
+    </div>
+</div>

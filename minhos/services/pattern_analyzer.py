@@ -27,6 +27,7 @@ import numpy as np
 from .sierra_client import get_sierra_client
 from ..models.market import MarketData
 from .state_manager import get_state_manager
+from ..core.symbol_integration import SymbolIntegration
 
 # Import unified market data store
 from ..core.market_data_adapter import get_market_data_adapter
@@ -112,6 +113,11 @@ class PatternAnalyzer:
         self.db_path.parent.mkdir(exist_ok=True)
         
         self.running = False
+        
+        # Centralized symbol management
+        self.symbol_integration = SymbolIntegration()
+        self.tradeable_symbols = self.symbol_integration.get_pattern_analyzer_symbols()
+        self.symbol_integration.mark_service_migrated('pattern_analyzer')
         
         # MIGRATED: Replace market data buffer with unified store
         self.market_data_adapter = get_market_data_adapter()
@@ -285,13 +291,19 @@ class PatternAnalyzer:
         
         logger.info("Pattern Analyzer stopped")
     
-    async def _on_market_data_update(self, market_data: MarketData):
+    async def _on_market_data_update(self, market_data):
         """MIGRATED: Handle market data updates from unified store"""
         try:
+            # Handle both MarketData objects and dictionaries
+            if isinstance(market_data, dict):
+                symbol = market_data.get('symbol', 'UNKNOWN')
+            else:
+                symbol = getattr(market_data, 'symbol', 'UNKNOWN')
+            
             # Detect patterns in real-time using data from unified store
             await self._detect_realtime_patterns()
             
-            logger.debug(f"📊 Pattern analysis updated for {market_data.symbol}")
+            logger.debug(f"📊 Pattern analysis updated for {symbol}")
             
         except Exception as e:
             logger.error(f"❌ Market data processing error: {e}")

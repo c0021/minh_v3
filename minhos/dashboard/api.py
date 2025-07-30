@@ -23,11 +23,12 @@ from pydantic import BaseModel, Field
 from minhos.services import (
     get_sierra_client, get_market_data_service, get_web_api_service,
     get_state_manager, get_ai_brain_service, get_trading_engine,
-    get_pattern_analyzer, get_risk_manager
+    get_risk_manager
 )
 from minhos.services.chat_service import get_chat_service
-from minhos.services.state_manager import TradingState, SystemState
+from minhos.services.state_manager import SystemState
 from minhos.services.trading_engine import MarketRegime
+# Removed resilient market data import - NO FAKE DATA PHILOSOPHY
 from minhos.services.risk_manager import RiskLevel
 
 logger = logging.getLogger(__name__)
@@ -39,17 +40,24 @@ def get_live_market_data():
         sierra_client = get_running_service('sierra_client')
         
         if sierra_client and hasattr(sierra_client, 'last_market_data'):
+            # Get primary symbol from centralized symbol management
+            from ..core.symbol_integration import get_ai_brain_primary_symbol, get_symbol_integration
+            primary_symbol = get_ai_brain_primary_symbol()
+            
             market_data_dict = sierra_client.last_market_data
-            if market_data_dict and 'NQU25-CME' in market_data_dict:
-                nq_data = market_data_dict['NQU25-CME']
+            if market_data_dict and primary_symbol in market_data_dict:
+                primary_data = market_data_dict[primary_symbol]
+                
+                # Mark service as migrated to centralized symbol management
+                get_symbol_integration().mark_service_migrated('dashboard')
                 return {
                     "connected": True,
-                    "symbol": nq_data.symbol,
-                    "price": nq_data.close,
-                    "bid": nq_data.bid,
-                    "ask": nq_data.ask,
-                    "volume": nq_data.volume,
-                    "last_update": nq_data.timestamp.isoformat() if hasattr(nq_data.timestamp, 'isoformat') else str(nq_data.timestamp),
+                    "symbol": primary_data.symbol,
+                    "price": primary_data.close,
+                    "bid": primary_data.bid,
+                    "ask": primary_data.ask,
+                    "volume": primary_data.volume,
+                    "last_update": primary_data.timestamp.isoformat() if hasattr(primary_data.timestamp, 'isoformat') else str(primary_data.timestamp),
                     "data_points": len(market_data_dict),
                     "symbols": list(market_data_dict.keys())
                 }
@@ -97,6 +105,29 @@ class ConfigUpdateRequest(BaseModel):
     value: Any
 
 # System endpoints
+@router.get("/state")
+async def get_system_state():
+    """Get basic system state"""
+    try:
+        state_manager = get_state_manager()
+        current_state = state_manager.get_current_state()
+        
+        return {
+            "system_state": current_state.get("system_state", "OFFLINE"),
+            "trading_state": current_state.get("trading_state", "MANUAL"),
+            "timestamp": datetime.now().isoformat(),
+            "status": "online" if current_state.get("system_state") == "ONLINE" else "offline"
+        }
+    except Exception as e:
+        logger.error(f"Error getting system state: {e}")
+        return {
+            "system_state": "ERROR",
+            "trading_state": "UNKNOWN", 
+            "timestamp": datetime.now().isoformat(),
+            "status": "error",
+            "error": str(e)
+        }
+
 @router.get("/status", response_model=SystemStatusResponse)
 async def get_system_status():
     """Get comprehensive system status"""
@@ -158,20 +189,34 @@ async def set_trading_mode(request: TradingModeRequest):
     try:
         state_manager = get_state_manager()
         
-        # Validate mode
-        try:
-            new_mode = TradingState[request.mode.upper()]
-        except KeyError:
+        # Map mode to configuration
+        mode = request.mode.lower()
+        if mode == "manual":
+            config_update = {
+                "trading_enabled": True,
+                "auto_trade_enabled": False
+            }
+        elif mode == "semi_auto":
+            config_update = {
+                "trading_enabled": True,
+                "auto_trade_enabled": True
+            }
+        elif mode == "full_auto":
+            config_update = {
+                "trading_enabled": False,
+                "auto_trade_enabled": True
+            }
+        else:
             raise HTTPException(status_code=400, detail=f"Invalid mode: {request.mode}")
         
-        # Update mode
-        await state_manager.set_trading_mode(new_mode)
+        # Update system configuration
+        await state_manager.update_system_config(**config_update)
         
-        logger.info(f"Trading mode changed to {new_mode.value} - {request.reason or 'No reason provided'}")
+        logger.info(f"Trading mode changed to {mode} - {request.reason or 'No reason provided'}")
         
         return {
             "success": True,
-            "mode": new_mode.value,
+            "mode": mode,
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
@@ -185,8 +230,12 @@ async def emergency_stop():
         state_manager = get_state_manager()
         trading_engine = get_trading_engine()
         
-        # Set mode to manual
-        await state_manager.set_trading_mode(TradingState.MANUAL)
+        # Disable all trading
+        await state_manager.update_system_config(
+            trading_enabled=False,
+            auto_trade_enabled=False,
+            emergency_stop_triggered=True
+        )
         
         # Stop trading engine
         await trading_engine.emergency_stop()
@@ -211,6 +260,17 @@ async def get_market_data(
 ):
     """Get market data for a symbol"""
     try:
+        # Validate symbol against centralized management
+        from ..core.symbol_integration import get_symbol_integration
+        symbol_integration = get_symbol_integration()
+        available_symbols = symbol_integration.get_bridge_symbols()
+        
+        if symbol not in available_symbols:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Symbol {symbol} not available. Available symbols: {available_symbols}"
+            )
+        
         market_data = get_market_data_service()
         
         # Get historical data
@@ -227,25 +287,39 @@ async def get_market_data(
             "count": len(data),
             "timestamp": datetime.now().isoformat()
         }
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
     except Exception as e:
         logger.error(f"Error getting market data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/market/symbols")
 async def get_available_symbols():
-    """Get list of available trading symbols"""
+    """Get list of available trading symbols from centralized management"""
     try:
-        sierra_client = get_sierra_client()
-        symbols = await sierra_client.get_available_symbols()
+        # Use centralized symbol management
+        from ..core.symbol_integration import get_symbol_integration
+        symbol_integration = get_symbol_integration()
+        
+        # Get symbols from different services
+        trading_symbols = symbol_integration.get_trading_engine_symbols()
+        bridge_symbols = symbol_integration.get_bridge_symbols()
+        dashboard_symbols = symbol_integration.get_dashboard_symbols()
         
         return {
-            "symbols": symbols,
-            "count": len(symbols),
+            "trading_symbols": trading_symbols,
+            "bridge_symbols": bridge_symbols,
+            "dashboard_symbols": list(dashboard_symbols.keys()),
+            "primary_symbol": symbol_integration.get_ai_brain_primary_symbol(),
+            "total_count": len(set(trading_symbols + bridge_symbols + list(dashboard_symbols.keys()))),
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
         logger.error(f"Error getting symbols: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# REMOVED: Resilient market data endpoints - NO FAKE DATA PHILOSOPHY
+# System must fail honestly when Sierra Chart data unavailable
 
 # AI Transparency endpoints
 @router.get("/ai/current-analysis")
@@ -378,17 +452,23 @@ async def get_ai_execution_history():
 async def get_ai_pattern_analysis():
     """Get current pattern analysis from AI"""
     try:
-        pattern_analyzer = get_pattern_analyzer()
+        ai_brain = get_ai_brain_service()
         
-        # Get current patterns
+        # Get current patterns from AI brain service
         current_patterns = []
-        if hasattr(pattern_analyzer, 'get_current_patterns'):
-            current_patterns = pattern_analyzer.get_current_patterns()
+        try:
+            pattern_stats = await ai_brain.get_pattern_statistics()
+            current_patterns = pattern_stats.get('pattern_types', {})
+        except:
+            current_patterns = []
         
         # Get pattern performance
         pattern_performance = {}
-        if hasattr(pattern_analyzer, 'get_pattern_performance'):
-            pattern_performance = pattern_analyzer.get_pattern_performance()
+        try:
+            pattern_stats = await ai_brain.get_pattern_statistics()
+            pattern_performance = pattern_stats.get('success_rates', {})
+        except:
+            pattern_performance = {}
         
         return {
             "timestamp": datetime.now().isoformat(),
@@ -673,6 +753,17 @@ async def get_positions():
 async def manage_position(request: PositionRequest):
     """Open or close a position"""
     try:
+        # Validate symbol against centralized management
+        from ..core.symbol_integration import get_symbol_integration
+        symbol_integration = get_symbol_integration()
+        tradeable_symbols = symbol_integration.get_trading_engine_symbols()
+        
+        if request.symbol not in tradeable_symbols:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Symbol {request.symbol} not available for trading. Tradeable symbols: {tradeable_symbols}"
+            )
+        
         trading_engine = get_trading_engine()
         risk_manager = get_risk_manager()
         
@@ -772,12 +863,10 @@ async def get_detected_patterns(
 ):
     """Get recently detected patterns"""
     try:
-        pattern_analyzer = get_pattern_analyzer()
-        patterns = await pattern_analyzer.get_recent_patterns(
-            symbol=symbol,
-            pattern_type=pattern_type,
-            limit=limit
-        )
+        ai_brain = get_ai_brain_service()
+        # Get pattern statistics from AI brain service
+        pattern_stats = await ai_brain.get_pattern_statistics()
+        patterns = pattern_stats.get('pattern_types', {})
         
         return {
             "patterns": patterns,
@@ -982,6 +1071,60 @@ async def test_chat_processing(request: ChatTestRequest):
     except Exception as e:
         logger.error(f"Error testing chat processing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Symbol management endpoints
+@router.get("/symbols/rollover-status")
+async def get_rollover_status():
+    """Get contract rollover status for dashboard"""
+    try:
+        from ..core.symbol_integration import get_symbol_integration
+        # Check for rollovers within next 60 days for dashboard visibility
+        rollover_data = get_symbol_integration().check_rollover_status()
+        
+        # Get wider rollover alerts for dashboard (60 days ahead)
+        symbol_manager = get_symbol_integration().symbol_manager
+        wider_alerts = symbol_manager.get_rollover_alerts(days_ahead=60)
+        rollover_data['alerts'] = wider_alerts
+
+        # Format for dashboard display
+        dashboard_alerts = []
+        for alert in rollover_data.get('alerts', []):
+            days_until = alert['days_until_rollover']
+
+            # Determine alert level
+            if days_until <= 7:
+                level = "critical"
+                color = "#ff4444"
+            elif days_until <= 15:
+                level = "warning"
+                color = "#ffaa00"
+            elif days_until <= 30:
+                level = "info"
+                color = "#44aaff"
+            else:
+                level = "normal"
+                color = "#44ff44"
+
+            dashboard_alerts.append({
+                "symbol": alert['current_contract'],
+                "next_symbol": alert['next_contract'],
+                "days_until": days_until,
+                "rollover_date": alert['rollover_date'].strftime('%Y-%m-%d'),
+                "level": level,
+                "color": color,
+                "action_required": alert['action_required']
+            })
+
+        return {
+            "status": "success",
+            "alerts": dashboard_alerts,
+            "total_upcoming": len(dashboard_alerts),
+            "urgent_count": len([a for a in dashboard_alerts if a['level'] in ['critical', 'warning']]),
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
 
 # Health check endpoint
 @router.get("/health")

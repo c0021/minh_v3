@@ -1,0 +1,40 @@
+{
+  "timestamp": "2025-07-28T13:21:59.379309",
+  "symbol": "NQU25-CME",
+  "model_path": "/home/colindo/Sync/minh_v4/ml_models/lstm_model.h5",
+  "config": {
+    "epochs": 10,
+    "batch_size": 32,
+    "validation_split": 0.2,
+    "early_stopping_patience": 10,
+    "learning_rate": 0.001,
+    "min_data_points": 200,
+    "sequence_length": 20,
+    "features": 8
+  },
+  "evaluation_results": {
+    "final_loss": 7.429521792801097e-05,
+    "final_val_loss": 7.06794235156849e-05,
+    "best_val_loss": 7.06794235156849e-05,
+    "training_epochs": 10,
+    "direction_accuracy": 0.5069582504970179,
+    "mse": 7.06794235156849e-05,
+    "mae": 0.006717269774526358,
+    "prediction_samples": 2012
+  },
+  "feature_info": {
+    "feature_count": 8,
+    "sequence_length": 20,
+    "feature_names": [
+      "price_change",
+      "price_position",
+      "volume_ratio",
+      "volatility",
+      "gap",
+      "time_of_day",
+      "market_session",
+      "momentum"
+    ],
+    "description": "LSTM data pipeline for price direction prediction"
+  }
+}

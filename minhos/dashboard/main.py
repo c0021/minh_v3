@@ -19,18 +19,25 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from minhos.dashboard.api import router as api_router
+from minhos.dashboard.api_enhanced import router as enhanced_api_router
 from minhos.dashboard.websocket_chat import websocket_router as chat_router
+from minhos.dashboard.api_trading import router as trading_router
+from minhos.dashboard.api_ml_performance import router as ml_performance_router
+from minhos.dashboard.api_ml_pipeline import router as ml_pipeline_router
+from minhos.dashboard.api_kelly import router as kelly_router
+from minhos.dashboard.api_risk_validation_fastapi import router as risk_validation_router
 from minhos.services import (
     get_market_data_service, get_state_manager, 
     get_ai_brain_service, get_trading_engine
 )
+# Removed resilient market data imports - NO FAKE DATA PHILOSOPHY
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +70,12 @@ templates = Jinja2Templates(directory=str(templates_dir))
 
 # Include API routes
 app.include_router(api_router, prefix="/api")
+app.include_router(enhanced_api_router, prefix="/api")  # Enhanced API routes  
+app.include_router(trading_router)  # Trading API routes
+app.include_router(ml_performance_router)  # ML Performance API routes
+app.include_router(ml_pipeline_router)  # ML Pipeline API routes
+app.include_router(kelly_router)  # Kelly Criterion API routes
+app.include_router(risk_validation_router)  # Risk Validation API routes - Phase 3
 
 # Include WebSocket chat routes
 app.include_router(chat_router)
@@ -178,24 +191,27 @@ class DashboardState:
                 pass
             
             if sierra_client and hasattr(sierra_client, 'last_market_data'):
-                # Get the most recent market data from Sierra Client
+                # Get the most recent market data from Sierra Client (centralized symbol management)
+                from minhos.core.symbol_integration import get_ai_brain_primary_symbol
+                primary_symbol = get_ai_brain_primary_symbol()
+                
                 market_data_dict = sierra_client.last_market_data
-                if market_data_dict and 'NQU25-CME' in market_data_dict:
-                    nq_data = market_data_dict['NQU25-CME']
+                if market_data_dict and primary_symbol in market_data_dict:
+                    primary_data = market_data_dict[primary_symbol]
                     state['market'] = {
                         'connected': True,
-                        'symbol': nq_data.symbol,
-                        'price': nq_data.close,
-                        'bid': nq_data.bid,
-                        'ask': nq_data.ask,
-                        'volume': nq_data.volume,
-                        'last_update': nq_data.timestamp.isoformat() if hasattr(nq_data.timestamp, 'isoformat') else str(nq_data.timestamp),
+                        'symbol': primary_data.symbol,
+                        'price': primary_data.close,
+                        'bid': primary_data.bid,
+                        'ask': primary_data.ask,
+                        'volume': primary_data.volume,
+                        'last_update': primary_data.timestamp.isoformat() if hasattr(primary_data.timestamp, 'isoformat') else str(primary_data.timestamp),
                         'data_points': len(market_data_dict)
                     }
                 else:
                     state['market'] = {
                         'connected': True,
-                        'symbol': 'NQU25-CME',
+                        'symbol': primary_symbol,
                         'price': 0,
                         'bid': 0,
                         'ask': 0,
@@ -255,9 +271,42 @@ async def home(request: Request):
     """Main dashboard page"""
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "title": "MinhOS v3 Dashboard",
+        "title": "MinhOS v4 Trading Dashboard",
+        "version": "4.0.0"
+    })
+
+@app.get("/enhanced", response_class=RedirectResponse)
+async def enhanced_redirect():
+    """Redirect enhanced dashboard to main consolidated dashboard"""
+    return RedirectResponse(url="/", status_code=301)
+
+@app.get("/dashboard", response_class=RedirectResponse)
+async def dashboard_redirect():
+    """Redirect to main consolidated dashboard"""
+    return RedirectResponse(url="/", status_code=301)
+
+@app.get("/risk-validation", response_class=HTMLResponse)
+async def risk_validation_dashboard(request: Request):
+    """Risk Validation Dashboard page - Phase 3"""
+    return templates.TemplateResponse("risk_validation.html", {
+        "request": request,
+        "title": "Risk Validation Dashboard - Phase 3 - MinhOS v3",
+        "current_time": datetime.now().isoformat()
+    })
+
+@app.get("/ml-performance", response_class=HTMLResponse)
+async def ml_performance_dashboard(request: Request):
+    """ML Performance Dashboard page"""
+    return templates.TemplateResponse("ml_performance.html", {
+        "request": request,
+        "title": "ML Performance Dashboard - MinhOS v3",
         "version": "3.0.0"
     })
+
+@app.get("/ml-pipeline", response_class=RedirectResponse)
+async def ml_pipeline_redirect():
+    """Redirect ML pipeline dashboard to ML performance dashboard"""
+    return RedirectResponse(url="/ml-performance", status_code=301)
 
 @app.get("/health")
 async def health_check():
@@ -309,6 +358,9 @@ async def startup_event():
     """Initialize dashboard on startup"""
     logger.info("Starting MinhOS Dashboard...")
     await dashboard_state.start()
+    
+    # NO FAKE DATA - System fails honestly when no real Sierra Chart data available
+    logger.info("✅ Dashboard initialized - REAL DATA ONLY, fails honestly when disconnected")
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -327,6 +379,16 @@ class DashboardServer:
     
     async def start(self):
         """Start the dashboard server"""
+        # Check if port is available before starting
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.bind((self.host, self.port))
+            sock.close()
+        except OSError as e:
+            logger.error(f"Port {self.port} is already in use. Please stop any existing MinhOS processes first.")
+            raise e
+        
         config = uvicorn.Config(
             app=app,
             host=self.host,
@@ -342,7 +404,13 @@ class DashboardServer:
     async def stop(self):
         """Stop the dashboard server"""
         if self.server:
-            await self.server.shutdown()
+            try:
+                if hasattr(self.server, 'should_exit'):
+                    self.server.should_exit = True
+                if hasattr(self.server, 'shutdown'):
+                    await self.server.shutdown()
+            except Exception as e:
+                logger.error(f"Error during server shutdown: {e}")
 
 
 # For standalone testing

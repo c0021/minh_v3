@@ -1,0 +1,184 @@
+{
+  "test_summary": {
+    "start_time": "2025-07-26T14:58:06.751962",
+    "end_time": "2025-07-26T14:58:08.890761",
+    "duration_seconds": 2.13857,
+    "total_tests": 8,
+    "passed_tests": 7,
+    "failed_tests": 1,
+    "success_rate": 87.5
+  },
+  "detailed_results": {
+    "service_instantiation": {
+      "trading_service": {
+        "instantiated": true,
+        "class_name": "TradingService",
+        "has_start_method": true,
+        "has_stop_method": true,
+        "inherits_base_service": false
+      },
+      "risk_manager": {
+        "instantiated": true,
+        "class_name": "RiskManager",
+        "has_start_method": true,
+        "has_validate_trade": true,
+        "has_health_check": true,
+        "inherits_base_service": false
+      },
+      "api_server": {
+        "instantiated": true,
+        "class_name": "APIServer",
+        "host": "127.0.0.1",
+        "port": 8001,
+        "has_fastapi_app": true,
+        "inherits_base_service": false
+      },
+      "dashboard_server": {
+        "instantiated": true,
+        "class_name": "DashboardServer",
+        "host": "127.0.0.1",
+        "port": 8889,
+        "has_fastapi_app": true,
+        "has_connection_manager": true,
+        "inherits_base_service": false
+      },
+      "overall_success": true
+    },
+    "service_startup": {
+      "risk_manager": {
+        "started": true,
+        "startup_time_seconds": 0.019580364227294922,
+        "running_state": false
+      },
+      "trading_service": {
+        "started": true,
+        "startup_time_seconds": 0.03905439376831055,
+        "running_state": false
+      },
+      "api_server": {
+        "started": true,
+        "startup_time_seconds": 0.001737356185913086,
+        "running_state": false
+      },
+      "dashboard_server": {
+        "started": true,
+        "startup_time_seconds": 0.002660512924194336,
+        "running_state": false
+      },
+      "overall_success": true
+    },
+    "inter_service_communication": {
+      "trading_to_risk": {
+        "communication_successful": true,
+        "validation_result": false,
+        "order_details": {
+          "symbol": "NQU25-CME",
+          "side": "BUY",
+          "quantity": 1
+        }
+      },
+      "api_service_refs": {
+        "sierra_client": true,
+        "state_manager": true,
+        "ai_brain": true,
+        "risk_manager": true,
+        "trading_service": true
+      },
+      "dashboard_to_api": {
+        "communication_successful": true,
+        "status_keys": [
+          "status",
+          "timestamp",
+          "services",
+          "uptime_seconds",
+          "request_count",
+          "active_websockets"
+        ],
+        "has_timestamp": true
+      },
+      "overall_success": true
+    },
+    "api_functionality": {
+      "route_registration": {
+        "total_routes": 25,
+        "expected_routes_found": {
+          "/api/system/status": true,
+          "/api/system/health": true,
+          "/api/market/latest": true,
+          "/api/trading/config": true,
+          "/api/trading/positions": true,
+          "/api/enhanced/autonomous-status": true
+        },
+        "all_expected_present": true
+      },
+      "middleware": {
+        "cors_enabled": true,
+        "total_middlewares": 1
+      },
+      "overall_success": true
+    },
+    "dashboard_functionality": {
+      "file_setup": {
+        "static_dir_exists": true,
+        "templates_dir_exists": true,
+        "templates_initialized": true,
+        "static_dir_path": "/home/colindo/Sync/minh_v4/minhos/dashboard/static",
+        "templates_dir_path": "/home/colindo/Sync/minh_v4/minhos/dashboard/templates"
+      },
+      "websocket_manager": {
+        "manager_initialized": true,
+        "active_connections": 0,
+        "has_broadcast_method": true
+      },
+      "routes": {
+        "total_routes": 16,
+        "expected_routes": {
+          "/": true,
+          "/enhanced": true,
+          "/dashboard": true,
+          "/health": true
+        },
+        "all_expected_present": true
+      },
+      "overall_success": true
+    },
+    "data_flow": {
+      "overall_success": false,
+      "error": "asdict() should be called on dataclass instances"
+    },
+    "error_handling": {
+      "invalid_trade_handling": {
+        "handled_gracefully": true,
+        "validation_result": false,
+        "service_still_running": true
+      },
+      "missing_service_handling": {
+        "handled_gracefully": true,
+        "market_data_result": null,
+        "service_still_running": true
+      },
+      "overall_success": true
+    },
+    "service_shutdown": {
+      "shutdown_results": {
+        "dashboard_server": {
+          "stopped_cleanly": true,
+          "shutdown_time_seconds": 0.00019049644470214844
+        },
+        "api_server": {
+          "stopped_cleanly": true,
+          "shutdown_time_seconds": 9.417533874511719e-05
+        },
+        "trading_service": {
+          "stopped_cleanly": true,
+          "shutdown_time_seconds": 0.053495168685913086
+        },
+        "risk_manager": {
+          "stopped_cleanly": true,
+          "shutdown_time_seconds": 0.014816999435424805
+        }
+      },
+      "overall_success": true
+    }
+  }
+}

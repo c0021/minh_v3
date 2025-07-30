@@ -25,6 +25,9 @@ from ..models.market import MarketData
 from .state_manager import get_state_manager, Position, TradingState, SystemState
 from .ai_brain_service import get_ai_brain_service, TradingSignal, SignalType
 from .risk_manager import get_risk_manager
+from .ml_pipeline_service import MLPipelineService
+from .position_sizing_service import get_position_sizing_service
+from ..core.symbol_integration import SymbolIntegration
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -102,11 +105,22 @@ class TradingEngine:
         """Initialize Trading Engine"""
         self.running = False
         
+        # Load tradeable symbols from centralized management
+        from ..core.symbol_integration import get_symbol_integration
+        self.symbol_integration = get_symbol_integration()
+        self.tradeable_symbols = self.symbol_integration.get_trading_engine_symbols()
+        self.primary_symbol = self.symbol_integration.get_ai_brain_primary_symbol()
+        
+        # Mark service as migrated to centralized symbol management
+        self.symbol_integration.mark_service_migrated('trading_engine')
+        
         # Service references
         self.sierra_client = None
         self.state_manager = None
         self.ai_brain = None
         self.risk_manager = None
+        self.ml_pipeline = None
+        self.position_sizing = None
         
         # Trading state
         self.current_regime = MarketRegime.UNKNOWN
@@ -147,11 +161,12 @@ class TradingEngine:
         
         # Configuration
         self.config = {
-            "auto_execution_enabled": False,
+            "auto_execution_enabled": True,
             "max_position_size": 5,
             "risk_per_trade": 0.02,
             "volatility_threshold": 2.0,
             "trend_threshold": 0.7,
+            "use_ml_position_sizing": True,  # Enable ML-enhanced Kelly sizing
             "decision_timeout_seconds": {
                 DecisionPriority.CRITICAL: 300,    # 5 minutes
                 DecisionPriority.HIGH: 1800,       # 30 minutes
@@ -195,6 +210,8 @@ class TradingEngine:
         self.state_manager = get_state_manager()
         self.ai_brain = get_ai_brain_service()
         self.risk_manager = get_risk_manager()
+        self.ml_pipeline = MLPipelineService()
+        self.position_sizing = get_position_sizing_service()
         
         # Subscribe to market data
         if hasattr(self.sierra_client, 'add_data_handler'):
@@ -221,20 +238,32 @@ class TradingEngine:
         
         logger.info("Trading Engine stopped")
     
-    async def _on_market_data(self, market_data: MarketData):
+    async def _on_market_data(self, market_data):
         """Handle new market data"""
         try:
-            # Add to analysis buffer
-            data_point = {
-                'timestamp': market_data.timestamp,
-                'symbol': market_data.symbol,
-                'close': market_data.close,
-                'bid': market_data.bid,
-                'ask': market_data.ask,
-                'volume': market_data.volume,
-                'high': getattr(market_data, 'high', market_data.close),
-                'low': getattr(market_data, 'low', market_data.close)
-            }
+            # Handle both MarketData objects and dictionaries
+            if isinstance(market_data, dict):
+                data_point = {
+                    'timestamp': market_data.get('timestamp'),
+                    'symbol': market_data.get('symbol'),
+                    'close': market_data.get('close'),
+                    'bid': market_data.get('bid'),
+                    'ask': market_data.get('ask'),
+                    'volume': market_data.get('volume'),
+                    'high': market_data.get('high', market_data.get('close')),
+                    'low': market_data.get('low', market_data.get('close'))
+                }
+            else:
+                data_point = {
+                    'timestamp': market_data.timestamp,
+                    'symbol': market_data.symbol,
+                    'close': market_data.close,
+                    'bid': market_data.bid,
+                    'ask': market_data.ask,
+                    'volume': market_data.volume,
+                    'high': getattr(market_data, 'high', market_data.close),
+                    'low': getattr(market_data, 'low', market_data.close)
+                }
             
             self.market_data_buffer.append(data_point)
             
@@ -455,7 +484,7 @@ class TradingEngine:
                 return
             
             # AI AUTONOMOUS EXECUTION - No human approval needed
-            if signal.confidence >= 0.75:  # High confidence threshold for autonomous execution
+            if signal.confidence >= 0.65:  # ML confidence threshold for autonomous execution
                 logger.info(f"🤖 AUTONOMOUS EXECUTION: {signal.signal.value} (confidence: {signal.confidence:.1%})")
                 success = await self._execute_autonomous_trade(trade_order, signal)
                 
@@ -570,8 +599,9 @@ class TradingEngine:
             else:
                 execution_strategy = ExecutionStrategy.ADAPTIVE  # Use adaptive execution for regular signals
             
+            # Use primary trading symbol from centralized symbol management
             order = TradeOrder(
-                symbol="NQU25-CME",  # Default symbol - should be configurable
+                symbol=self.primary_symbol,  # Dynamic symbol from centralized management
                 side=side,
                 quantity=position_size,
                 order_type=execution_strategy,
@@ -587,8 +617,46 @@ class TradingEngine:
             return None
     
     async def _calculate_position_size(self, signal: TradingSignal, current_price: float) -> int:
-        """Calculate position size based on AI confidence and risk management"""
+        """Calculate position size using ML-Enhanced Kelly Criterion"""
         try:
+            # Check if ML-enhanced sizing is enabled
+            use_ml_sizing = self.config.get("use_ml_position_sizing", True)
+            
+            if use_ml_sizing:
+                # Use ML-Enhanced Kelly Criterion
+                try:
+                    from .position_sizing_service import get_position_sizing_service
+                    sizing_service = get_position_sizing_service()
+                    
+                    # Get optimal position size from Kelly Criterion
+                    kelly_position = await sizing_service.calculate_optimal_position(
+                        symbol=self.primary_symbol,
+                        current_price=current_price,
+                        market_data=signal.context  # Pass signal context as market data
+                    )
+                    
+                    position_size = kelly_position.risk_adjusted_size
+                    
+                    logger.info(f"📏 ML-Enhanced Position Size (Kelly Criterion):")
+                    logger.info(f"    Win Probability: {kelly_position.win_probability:.2%}")
+                    logger.info(f"    Kelly Fraction: {kelly_position.kelly_fraction:.3f}")
+                    logger.info(f"    Confidence Score: {kelly_position.confidence_score:.2f}")
+                    logger.info(f"    Recommended Size: {position_size}")
+                    
+                    # Store Kelly details in signal context for later reference
+                    signal.context['kelly_position'] = {
+                        'win_probability': kelly_position.win_probability,
+                        'kelly_fraction': kelly_position.kelly_fraction,
+                        'confidence_score': kelly_position.confidence_score
+                    }
+                    
+                    return max(1, position_size)
+                    
+                except Exception as e:
+                    logger.warning(f"ML sizing failed, falling back to simple sizing: {e}")
+                    # Fall back to simple sizing
+            
+            # Simple position sizing (fallback)
             base_size = 1  # Base position size
             
             # Adjust size based on confidence
@@ -604,7 +672,7 @@ class TradingEngine:
             else:
                 position_size = base_size
             
-            logger.info(f"📏 Position Size Calculation:")
+            logger.info(f"📏 Simple Position Size Calculation:")
             logger.info(f"    Base Size: {base_size}")
             logger.info(f"    Confidence Multiplier: {confidence_multiplier:.2f}")
             logger.info(f"    Final Size: {position_size}")
@@ -1148,6 +1216,66 @@ class TradingEngine:
         """Get performance metrics"""
         return self.performance_metrics.copy()
     
+    async def get_positions(self) -> List[Dict[str, Any]]:
+        """Get current trading positions"""
+        if not self.state_manager:
+            return []
+        
+        try:
+            positions = self.state_manager.get_positions()
+            # Convert Position objects to dictionaries
+            return [
+                {
+                    "symbol": pos.symbol,
+                    "quantity": pos.quantity,
+                    "entry_price": pos.entry_price,
+                    "current_price": pos.current_price,
+                    "unrealized_pnl": pos.unrealized_pnl,
+                    "entry_time": pos.entry_time.isoformat() if pos.entry_time else None,
+                    "side": "long" if pos.quantity > 0 else "short" if pos.quantity < 0 else "flat"
+                }
+                for pos in positions
+            ]
+        except Exception as e:
+            logger.error(f"Error getting positions: {e}")
+            return []
+
+    def check_symbol_rollover(self) -> Dict[str, Any]:
+        """Check if any trading symbols need rollover attention"""
+        try:
+            rollover_status = self.symbol_integration.check_rollover_status()
+            
+            # If rollover is needed, create trading decision
+            if rollover_status['needs_attention']:
+                for alert in rollover_status['alerts']:
+                    if alert['action_required']:
+                        decision = TradingDecision(
+                            id=f"rollover_{alert['current_symbol']}",
+                            title=f"Contract Rollover Required: {alert['current_symbol']}",
+                            description=f"Contract {alert['current_symbol']} expires in {alert['days_until_rollover']} days. Consider rolling to {alert['next_symbol']}.",
+                            priority=DecisionPriority.HIGH if alert['days_until_rollover'] <= 5 else DecisionPriority.MEDIUM,
+                            options=["Roll positions now", "Roll closer to expiry", "Close positions"],
+                            context={
+                                'symbol_rollover': True,
+                                'current_symbol': alert['current_symbol'],
+                                'next_symbol': alert['next_symbol'],
+                                'days_until_rollover': alert['days_until_rollover'],
+                                'expiry_date': alert['expiry_date']
+                            },
+                            auto_action="Roll closer to expiry" if alert['days_until_rollover'] > 5 else None
+                        )
+                        
+                        # Add to pending decisions if not already there
+                        if not any(d.id == decision.id for d in self.pending_decisions):
+                            self.pending_decisions.append(decision)
+                            logger.info(f"📅 Created rollover decision: {decision.title}")
+            
+            return rollover_status
+            
+        except Exception as e:
+            logger.error(f"Error checking symbol rollover: {e}")
+            return {'error': str(e)}
+
     def get_engine_status(self) -> Dict[str, Any]:
         """Get comprehensive engine status"""
         return {
@@ -1159,6 +1287,8 @@ class TradingEngine:
             "performance": self.performance_metrics.copy(),
             "market_insights": self.market_insights.copy(),
             "stats": self.stats.copy(),
+            "tradeable_symbols": self.tradeable_symbols,
+            "primary_symbol": self.primary_symbol,
             "timestamp": datetime.now().isoformat()
         }
 
