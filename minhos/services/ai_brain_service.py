@@ -58,8 +58,11 @@ from ..models.market import MarketData
 from .state_manager import get_state_manager
 from ..core.market_data_adapter import get_market_data_adapter
 from .sierra_historical_data import get_sierra_historical_service
+<<<<<<< HEAD
 from .ab_testing_service import get_ab_testing_service
 from .ml_monitoring_service import get_ml_monitoring_service
+=======
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -256,6 +259,7 @@ class AIBrainService:
         
         logger.info("🧠 AI Brain Service initialized")
     
+<<<<<<< HEAD
     def _initialize_ml_capabilities(self):
         """Initialize ML capabilities (LSTM, Ensemble, etc.)"""
         logger.info(f"🔄 Initializing ML capabilities - HAS_ML_PIPELINE:{HAS_ML_PIPELINE}, HAS_LSTM:{HAS_LSTM}, HAS_ENSEMBLE:{HAS_ENSEMBLE}, HAS_KELLY:{HAS_KELLY}")
@@ -324,6 +328,8 @@ class AIBrainService:
             except Exception as e:
                 logger.error(f"❌ Force initialization failed: {e}")
     
+=======
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     async def _load_historical_context(self):
         """Load historical market data for AI context"""
         try:
@@ -507,6 +513,7 @@ class AIBrainService:
         """Perform comprehensive market analysis with historical data fallback"""
         try:
             # Check if we have sufficient real-time data
+<<<<<<< HEAD
             analysis_result = await self._get_analysis_data()
             if not analysis_result:
                 return
@@ -520,15 +527,24 @@ class AIBrainService:
                 analysis_data = analysis_result
                 data_source = 'realtime'
             
+=======
+            analysis_data = await self._get_analysis_data()
+            if not analysis_data:
+                return
+            
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             # Perform different types of analysis
             trend_analysis = await self._analyze_trend(analysis_data)
             momentum_analysis = await self._analyze_momentum(analysis_data)
             volatility_analysis = await self._analyze_volatility(analysis_data)
             volume_analysis = await self._analyze_volume(analysis_data)
             pattern_analysis = await self._analyze_patterns(analysis_data)
+<<<<<<< HEAD
             
             # Perform ML analysis
             ml_analysis = await self._analyze_ml_predictions(analysis_data)
+=======
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             
             # Combine analyses
             combined_analysis = await self._combine_analyses(
@@ -536,8 +552,13 @@ class AIBrainService:
                 volume_analysis, pattern_analysis, ml_analysis
             )
             
+<<<<<<< HEAD
             # Generate trading signal with data source context and A/B testing
             signal = await self._generate_signal(combined_analysis, analysis_data, data_source)
+=======
+            # Generate trading signal
+            signal = await self._generate_signal(combined_analysis, analysis_data)
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             
             # Update current state
             self.current_analysis = combined_analysis
@@ -568,10 +589,17 @@ class AIBrainService:
         except Exception as e:
             logger.error(f"❌ Analysis error: {e}")
     
+<<<<<<< HEAD
     async def _get_analysis_data(self) -> Dict[str, Any]:
         """Get data for analysis - real-time or historical fallback"""
         try:
             # First, check if we have sufficient and fresh real-time data with volume
+=======
+    async def _get_analysis_data(self) -> List[Dict[str, Any]]:
+        """Get data for analysis - real-time or historical fallback"""
+        try:
+            # First, check if we have sufficient real-time data with volume
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             if self.market_data_buffer:
                 recent_data = list(self.market_data_buffer)[-self.analysis_params["trend_period"]:]
                 
@@ -579,6 +607,7 @@ class AIBrainService:
                 recent_volumes = [d.get('volume', 0) for d in recent_data if d.get('volume', 0) > 0]
                 avg_recent_volume = sum(recent_volumes) / len(recent_volumes) if recent_volumes else 0
                 
+<<<<<<< HEAD
                 # Check data freshness
                 data_is_fresh = False
                 if recent_data:
@@ -605,6 +634,12 @@ class AIBrainService:
                     return {'data': recent_data, 'source': 'realtime'}
                 elif avg_recent_volume >= self.analysis_params["min_volume_threshold"] and not data_is_fresh:
                     logger.info(f"⚠️ Real-time data has good volume ({avg_recent_volume:,.0f}) but is stale, falling back to historical data")
+=======
+                # If we have good volume data, use real-time
+                if avg_recent_volume >= self.analysis_params["min_volume_threshold"]:
+                    logger.info(f"📊 Using real-time data (avg volume: {avg_recent_volume:,.0f})")
+                    return recent_data
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                 else:
                     logger.info(f"⚠️ Low real-time volume ({avg_recent_volume:.0f}), falling back to historical data")
             
@@ -634,7 +669,11 @@ class AIBrainService:
                         
                         logger.info(f"📈 Using historical data: {len(historical_data)} records, "
                                   f"avg volume: {sum(d['volume'] for d in historical_data)/len(historical_data):,.0f}")
+<<<<<<< HEAD
                         return {'data': historical_data[-self.analysis_params["trend_period"]:], 'source': 'historical'}
+=======
+                        return historical_data[-self.analysis_params["trend_period"]:]  # Last N periods
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                         
                 except Exception as e:
                     logger.error(f"❌ Error fetching historical data: {e}")
@@ -642,6 +681,7 @@ class AIBrainService:
             # If no historical service or error, return what we have
             if self.market_data_buffer:
                 logger.warning("⚠️ Using limited real-time data despite low volume")
+<<<<<<< HEAD
                 return {'data': list(self.market_data_buffer)[-self.analysis_params["trend_period"]:], 'source': 'realtime_limited'}
             
             logger.warning("❌ No data available for analysis")
@@ -651,6 +691,16 @@ class AIBrainService:
             logger.error(f"❌ Error getting analysis data: {e}")
             fallback_data = list(self.market_data_buffer)[-self.analysis_params["trend_period"]:] if self.market_data_buffer else []
             return {'data': fallback_data, 'source': 'error_fallback'}
+=======
+                return list(self.market_data_buffer)[-self.analysis_params["trend_period"]:]
+            
+            logger.warning("❌ No data available for analysis")
+            return []
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting analysis data: {e}")
+            return list(self.market_data_buffer)[-self.analysis_params["trend_period"]:] if self.market_data_buffer else []
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     
     async def _analyze_trend(self, data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze market trend"""
@@ -1051,7 +1101,11 @@ class AIBrainService:
                 volume_analysis="unknown"
             )
     
+<<<<<<< HEAD
     async def _generate_signal(self, analysis: MarketAnalysis, data: List[Dict[str, Any]], data_source: str = 'realtime') -> Optional[TradingSignal]:
+=======
+    async def _generate_signal(self, analysis: MarketAnalysis, data: List[Dict[str, Any]]) -> Optional[TradingSignal]:
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
         """Generate trading signal based on analysis - REAL DATA ONLY"""
         try:
             if not analysis or not data:
@@ -1065,6 +1119,7 @@ class AIBrainService:
                 logger.error("🚨 NO REAL DATA - Invalid price data, refusing to generate signal")
                 return None
             
+<<<<<<< HEAD
             # Check data freshness - only apply strict freshness check for real-time data
             if data_source == 'realtime':
                 try:
@@ -1104,6 +1159,29 @@ class AIBrainService:
                         logger.info(f"📈 Using {data_source} data from {age_hours:.1f} hours ago for weekend analysis")
                 except Exception as e:
                     logger.info(f"📈 Using {data_source} data for weekend analysis (timestamp parse error: {e})")
+=======
+            # Check data freshness - only trade on recent data
+            try:
+                last_timestamp = data[-1].get('timestamp')
+                if last_timestamp:
+                    from datetime import datetime, timedelta
+                    if isinstance(last_timestamp, str):
+                        last_time = datetime.fromisoformat(last_timestamp.replace('Z', '+00:00'))
+                    elif isinstance(last_timestamp, (int, float)):
+                        # Handle Unix timestamp
+                        last_time = datetime.fromtimestamp(last_timestamp)
+                    else:
+                        last_time = last_timestamp
+                    
+                    age_minutes = (datetime.now() - last_time.replace(tzinfo=None)).total_seconds() / 60
+                    if age_minutes > 5:  # Data older than 5 minutes is stale
+                        logger.error(f"🚨 STALE DATA - Market data is {age_minutes:.1f} minutes old, refusing to generate signal")
+                        return None
+            except Exception as e:
+                logger.warning(f"Could not verify data freshness: {e}")
+                # If we can't verify freshness, err on the side of caution
+                return None
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             
             # Base signal logic
             signal_type = SignalType.HOLD

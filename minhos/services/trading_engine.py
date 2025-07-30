@@ -599,9 +599,21 @@ class TradingEngine:
             else:
                 execution_strategy = ExecutionStrategy.ADAPTIVE  # Use adaptive execution for regular signals
             
+<<<<<<< HEAD
             # Use primary trading symbol from centralized symbol management
             order = TradeOrder(
                 symbol=self.primary_symbol,  # Dynamic symbol from centralized management
+=======
+            # Get primary trading symbol from centralized symbol management
+            from ..core.symbol_integration import get_ai_brain_primary_symbol, get_symbol_integration
+            primary_symbol = get_ai_brain_primary_symbol()
+            
+            # Mark service as migrated to centralized symbol management
+            get_symbol_integration().mark_service_migrated('trading_engine')
+            
+            order = TradeOrder(
+                symbol=primary_symbol,  # Dynamic symbol from centralized management
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                 side=side,
                 quantity=position_size,
                 order_type=execution_strategy,
@@ -1240,6 +1252,7 @@ class TradingEngine:
             logger.error(f"Error getting positions: {e}")
             return []
 
+<<<<<<< HEAD
     def check_symbol_rollover(self) -> Dict[str, Any]:
         """Check if any trading symbols need rollover attention"""
         try:
@@ -1276,6 +1289,8 @@ class TradingEngine:
             logger.error(f"Error checking symbol rollover: {e}")
             return {'error': str(e)}
 
+=======
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     def get_engine_status(self) -> Dict[str, Any]:
         """Get comprehensive engine status"""
         return {

@@ -195,8 +195,12 @@ class SymbolManager:
                 asset_type=AssetType.FOREX,
                 primary=False,
                 timeframes=['1min'],
+<<<<<<< HEAD
                 subscription_priority=3,
                 enabled=False  # DISABLED for 3-symbol focus
+=======
+                subscription_priority=3
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             ),
             'XAUUSD': SymbolConfig(
                 symbol='XAUUSD',
@@ -204,8 +208,12 @@ class SymbolManager:
                 asset_type=AssetType.FOREX,
                 primary=False,
                 timeframes=['1min'],
+<<<<<<< HEAD
                 subscription_priority=4,
                 enabled=False  # DISABLED for 3-symbol focus
+=======
+                subscription_priority=4
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             ),
             'VIX': SymbolConfig(
                 symbol='VIX_CGI',

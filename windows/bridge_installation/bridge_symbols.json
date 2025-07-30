@@ -6,6 +6,11 @@
   "active_symbols": [
     "NQU25-CME",
     "ESU25-CME", 
+<<<<<<< HEAD
+=======
+    "EURUSD",
+    "XAUUSD",
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     "VIX_CGI"
   ],
   
@@ -13,7 +18,11 @@
     "NQU25-CME": {
       "base_symbol": "NQ",
       "current_contract": "NQU25-CME",
+<<<<<<< HEAD
       "next_rollover_date": "2025-09-05",
+=======
+      "next_rollover_date": "2025-09-09",
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
       "next_contract": "NQZ25-CME",
       "exchange": "CME",
       "asset_type": "futures"
@@ -21,11 +30,28 @@
     "ESU25-CME": {
       "base_symbol": "ES", 
       "current_contract": "ESU25-CME",
+<<<<<<< HEAD
       "next_rollover_date": "2025-09-05",
+=======
+      "next_rollover_date": "2025-09-09",
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
       "next_contract": "ESZ25-CME",
       "exchange": "CME",
       "asset_type": "futures"
     },
+<<<<<<< HEAD
+=======
+    "EURUSD": {
+      "base_symbol": "EURUSD",
+      "current_contract": "EURUSD",
+      "asset_type": "forex"
+    },
+    "XAUUSD": {
+      "base_symbol": "XAUUSD", 
+      "current_contract": "XAUUSD",
+      "asset_type": "forex"
+    },
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     "VIX_CGI": {
       "base_symbol": "VIX",
       "current_contract": "VIX_CGI", 
@@ -36,6 +62,7 @@
   "rollover_alerts": [
     {
       "symbol": "NQU25-CME",
+<<<<<<< HEAD
       "rollover_date": "2025-09-05",
       "days_until_rollover": 41,
       "next_symbol": "NQZ25-CME",
@@ -47,13 +74,32 @@
       "days_until_rollover": 41,
       "next_symbol": "ESZ25-CME",
       "action_required": true
+=======
+      "rollover_date": "2025-09-09",
+      "days_until_rollover": 45,
+      "next_symbol": "NQZ25-CME",
+      "action_required": false
+    },
+    {
+      "symbol": "ESU25-CME", 
+      "rollover_date": "2025-09-09",
+      "days_until_rollover": 45,
+      "next_symbol": "ESZ25-CME",
+      "action_required": false
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     }
   ],
   
   "sync_info": {
     "source": "minhos_symbol_manager",
+<<<<<<< HEAD
     "last_sync": "2025-07-26T10:35:00Z",
     "sync_method": "manual_update",
     "notes": "Bridge symbols synchronized with 3-symbol focus: NQU25-CME, ESU25-CME, VIX_CGI only"
+=======
+    "last_sync": "2025-07-25T11:30:00Z",
+    "sync_method": "manual_update",
+    "notes": "Bridge symbols synchronized with centralized MinhOS symbol management system"
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
   }
 }

@@ -528,7 +528,10 @@ class SierraChartBridge:
         self.connection_state = ConnectionState.DISCONNECTED
         self.sierra_host = "127.0.0.1"  # Sierra Chart on same machine
         self.sierra_port = 11098  # Default DTC port
+<<<<<<< HEAD
         self.start_time = time.time()  # Track uptime for monitoring
+=======
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
         
         # Market data
         self.latest_market_data: Dict[str, MarketData] = {}
@@ -561,8 +564,13 @@ class SierraChartBridge:
         logger.warning("DTC market data access is blocked by Sierra Chart (Dec 2024 policy)")
         logger.info("Bridge will focus on historical data access via SCID files")
         
+<<<<<<< HEAD
         # Start event-driven file monitoring instead of polling
         await self._setup_file_watcher()
+=======
+        # Start background tasks for file-based data monitoring
+        asyncio.create_task(self._file_data_monitor())
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
         asyncio.create_task(self._market_data_publisher())
         
         logger.info("Sierra Chart Bridge started successfully")
@@ -594,9 +602,15 @@ class SierraChartBridge:
             logger.warning(f"Using fallback symbols: {fallback_symbols}")
             return fallback_symbols
     
+<<<<<<< HEAD
     async def _setup_file_watcher(self):
         """Setup event-driven file watching instead of polling"""
         logger.info("Setting up event-driven file watching...")
+=======
+    async def _file_data_monitor(self):
+        """Monitor Sierra Chart files for real-time data updates"""
+        logger.info("Starting file-based data monitoring...")
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
         
         # Common Sierra Chart data locations
         potential_data_paths = [
@@ -607,6 +621,7 @@ class SierraChartBridge:
             "D:\\SierraChart\\Data"
         ]
         
+<<<<<<< HEAD
         self.data_path = None
         for path in potential_data_paths:
             if os.path.exists(path):
@@ -615,10 +630,21 @@ class SierraChartBridge:
                 break
         
         if not self.data_path:
+=======
+        data_path = None
+        for path in potential_data_paths:
+            if os.path.exists(path):
+                data_path = path
+                logger.info(f"Found Sierra Chart data directory: {path}")
+                break
+        
+        if not data_path:
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             logger.warning("Sierra Chart data directory not found - historical data only")
             logger.info("Available alternative: Use Sierra Chart's 'Write Bar Data to File' study")
             return
         
+<<<<<<< HEAD
         # Setup file system watcher
         try:
             # Get the current event loop to pass to the file watcher
@@ -661,12 +687,19 @@ class SierraChartBridge:
         """Fallback polling monitor if file watching fails"""
         logger.info("Using fallback polling mode (5-second intervals)")
         
+=======
+        # Monitor for file updates
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
         while True:
             try:
                 # Check for SCID files for our symbols
                 for symbol in self.symbols:
                     scid_pattern = f"{symbol}*.scid"
+<<<<<<< HEAD
                     scid_files = glob.glob(os.path.join(self.data_path, scid_pattern))
+=======
+                    scid_files = glob.glob(os.path.join(data_path, scid_pattern))
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                     
                     for scid_file in scid_files:
                         try:
@@ -684,18 +717,28 @@ class SierraChartBridge:
                 await asyncio.sleep(10)
     
     async def _process_scid_update(self, scid_file: str, symbol: str):
+<<<<<<< HEAD
         """Process updated SCID file and broadcast via WebSocket + delta updates"""
+=======
+        """Process updated SCID file and extract latest market data"""
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
         try:
             # Use our existing file access API to read the SCID file
             from file_access_api import sierra_file_api
             
             # Get the latest records from the file
+<<<<<<< HEAD
+=======
+            # Note: sierra_file_api.read_file is designed for FastAPI endpoints
+            # For internal use, we'll access file info directly
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             if not os.path.exists(scid_file):
                 return
             
             # For now, simulate market data from file timestamp
             # In production, you'd parse the SCID binary format here
             mod_time = os.path.getmtime(scid_file)
+<<<<<<< HEAD
             file_size = os.path.getsize(scid_file)
             
             # Create market data from file info (enhanced with more realistic data)
@@ -719,6 +762,14 @@ class SierraChartBridge:
                 symbol=symbol,
                 timestamp=datetime.fromtimestamp(mod_time),
                 price=0.0,
+=======
+            
+            # Create market data from file info
+            market_data = MarketData(
+                symbol=symbol,
+                timestamp=datetime.fromtimestamp(mod_time),
+                price=0.0,  # Would extract from SCID data
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                 volume=0,
                 bid=0.0,
                 ask=0.0,
@@ -730,11 +781,15 @@ class SierraChartBridge:
             
             # Update our market data cache
             self.latest_market_data[symbol] = market_data
+<<<<<<< HEAD
             
             # [OPTIMIZED] NEW: Process through delta engine for WebSocket broadcasting
             await delta_engine.process_update(symbol, market_data_dict)
             
             logger.debug(f"[OK] EVENT-DRIVEN: Updated {symbol} from file change (no polling!)")
+=======
+            logger.debug(f"Updated market data for {symbol} from SCID file")
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             
         except Exception as e:
             logger.debug(f"Error processing SCID file {scid_file}: {e}")
@@ -1007,12 +1062,18 @@ class SierraChartBridge:
                             logger.debug(f"ACSIL file too old: {actual_file} ({file_age:.1f}s, max_age={max_age}s)")
                             continue
                         
+<<<<<<< HEAD
                         # Use cached file read to prevent resource exhaustion
                         content = await deduplicated_file_read(actual_file)
                         if content:
                             data = json.loads(content)
                         else:
                             continue
+=======
+                        # Direct file system read - bypasses HTTP API restrictions
+                        with open(actual_file, 'r') as f:
+                            data = json.load(f)
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                         
                         # Log when reading enhanced data
                         if actual_file.endswith('.tmp'):
@@ -1278,6 +1339,7 @@ async def startup_event():
     global start_time
     start_time = time.time()
     await bridge.start()
+<<<<<<< HEAD
     logger.info("[OK] MinhOS Sierra Chart Bridge API started with Phase 2 optimizations")
     logger.info("[OPTIMIZED] Event-driven file watching active (polling eliminated)")
     logger.info("[OPTIMIZED] WebSocket streaming with delta updates enabled")
@@ -1287,6 +1349,9 @@ async def shutdown_event():
     """Cleanup on shutdown"""
     logger.info("Shutting down MinhOS Sierra Chart Bridge...")
     await bridge.cleanup()
+=======
+    logger.info("MinhOS Sierra Chart Bridge API started")
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
 
 @app.get("/health")
 async def health_check():
@@ -1453,6 +1518,7 @@ async def get_streaming_data(symbol: str, request: Request):
     else:
         raise HTTPException(status_code=404, detail=f"Symbol {symbol} not available for streaming")
 
+<<<<<<< HEAD
 # [OPTIMIZED] OPTIMIZED WebSocket endpoints with delta updates
 @app.websocket("/ws/live_data/{symbol}")
 async def market_data_stream(websocket: WebSocket, symbol: str):
@@ -1499,6 +1565,9 @@ async def market_data_stream(websocket: WebSocket, symbol: str):
     finally:
         websocket_manager.disconnect(websocket)
 
+=======
+# WebSocket endpoint for real-time data
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
 @app.websocket("/ws/market_data")
 async def websocket_market_data_legacy(websocket: WebSocket):
     """Legacy WebSocket endpoint for backward compatibility"""
@@ -1693,11 +1762,15 @@ if __name__ == "__main__":
     logger.info("  Health: http://0.0.0.0:8765/health")
     logger.info("  Status: http://0.0.0.0:8765/status")
     logger.info("  Market Data: http://0.0.0.0:8765/api/market_data")
+<<<<<<< HEAD
     logger.info("  *** PHASE 2 OPTIMIZED ENDPOINTS ***")
     logger.info("  [OPTIMIZED] Optimized WebSocket: ws://0.0.0.0:8765/ws/live_data/{symbol}")
     logger.info("  [OPTIMIZED] Bridge Stats: http://0.0.0.0:8765/api/bridge/stats")
     logger.info("  [OPTIMIZED] Detailed Health: http://0.0.0.0:8765/api/bridge/health_detailed")
     logger.info("  *** MINHOS INTEGRATION ENDPOINTS ***")
+=======
+    logger.info("  *** NEW ENDPOINTS FOR MINHOS INTEGRATION ***")
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     logger.info("  Symbols API: http://0.0.0.0:8765/api/symbols")
     logger.info("  Data API: http://0.0.0.0:8765/api/data/{symbol}")
     logger.info("  Streaming API: http://0.0.0.0:8765/api/streaming/{symbol}")

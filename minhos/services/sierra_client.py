@@ -582,6 +582,7 @@ class SierraClient(BaseService):
         
         # More importantly - check if we're actually getting market data
         try:
+<<<<<<< HEAD
             # Get primary symbol for health check from centralized management
             from ..core.symbol_integration import get_symbol_integration
             symbol_integration = get_symbol_integration()
@@ -589,6 +590,10 @@ class SierraClient(BaseService):
             
             # Test if we can get actual market data (not just health ping)
             async with self.session.get(f"{self.bridge_url}/api/data/{primary_symbol}", timeout=5) as resp:
+=======
+            # Test if we can get actual market data (not just health ping)
+            async with self.session.get(f"{self.bridge_url}/api/data/NQU25-CME", timeout=5) as resp:
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                 if resp.status == 200:
                     data = await resp.json()
                     # Verify we got real data, not empty/cached
@@ -695,16 +700,20 @@ class SierraClient(BaseService):
             async with self.session.get(f"{self.bridge_url}/api/market_data", timeout=5) as resp:
                 if resp.status == 200:
                     data = await resp.json()
+<<<<<<< HEAD
                     
                     # Get expected symbols from centralized management
                     from ..core.symbol_integration import get_symbol_integration
                     symbol_integration = get_symbol_integration()
                     expected_symbols = set(symbol_integration.get_bridge_symbols())
                     
+=======
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                     # Convert all symbols to MarketData objects
                     result = {}
                     for symbol, symbol_data in data.items():
                         try:
+<<<<<<< HEAD
                             # Validate symbol is expected (log warning if unexpected)
                             if symbol not in expected_symbols:
                                 logger.debug(f"Bridge providing unexpected symbol: {symbol}")
@@ -719,6 +728,11 @@ class SierraClient(BaseService):
                     if missing_symbols:
                         logger.warning(f"Bridge missing expected symbols: {missing_symbols}")
                     
+=======
+                            result[symbol] = MarketData.from_sierra_data(symbol_data)
+                        except Exception as e:
+                            logger.error(f"Failed to parse market data for {symbol}: {e}")
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                     return result
                 else:
                     return {}

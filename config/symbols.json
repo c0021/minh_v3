@@ -59,8 +59,13 @@
       "primary": false,
       "timeframes": ["1min"],
       "subscription_priority": 3,
+<<<<<<< HEAD
       "enabled": false,
       "description": "EUR/USD forex pair - DISABLED for 3-symbol focus"
+=======
+      "enabled": true,
+      "description": "EUR/USD forex pair"
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     },
     "XAUUSD": {
       "symbol": "XAUUSD", 
@@ -68,8 +73,13 @@
       "primary": false,
       "timeframes": ["1min"],
       "subscription_priority": 4,
+<<<<<<< HEAD
       "enabled": false,
       "description": "Gold spot price - DISABLED for 3-symbol focus"
+=======
+      "enabled": true,
+      "description": "Gold spot price"
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     },
     "VIX": {
       "symbol": "VIX_CGI",
@@ -84,8 +94,13 @@
   
   "environments": {
     "production": {
+<<<<<<< HEAD
       "enabled_symbols": ["NQ", "ES", "VIX"],
       "max_concurrent_subscriptions": 3,
+=======
+      "enabled_symbols": ["NQ", "ES", "EURUSD", "XAUUSD", "VIX"],
+      "max_concurrent_subscriptions": 10,
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
       "rollover_alert_days": 15
     },
     "development": {

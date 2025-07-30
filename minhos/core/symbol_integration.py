@@ -121,6 +121,7 @@ class SymbolIntegration:
         
         return display_names.get(symbol, symbol)
     
+<<<<<<< HEAD
     def get_pattern_analyzer_symbols(self) -> List[str]:
         """Get symbols for Pattern Analyzer service"""
         symbols = get_active_symbols()
@@ -140,15 +141,20 @@ class SymbolIntegration:
         logger.info(f"Trading Engine symbols: {primary_symbols}")
         return primary_symbols
     
+=======
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     def mark_service_migrated(self, service_name: str):
         """Mark a service as successfully migrated to centralized symbols"""
         self._service_migrations[service_name] = True
         logger.info(f"Service {service_name} successfully migrated to centralized symbol management")
     
+<<<<<<< HEAD
     def is_service_migrated(self, service_name: str) -> bool:
         """Check if a service has been migrated to centralized symbol management"""
         return self._service_migrations.get(service_name, False)
     
+=======
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     def get_migration_status(self) -> Dict[str, Any]:
         """Get migration status of all services"""
         expected_services = [

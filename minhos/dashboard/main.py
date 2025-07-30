@@ -29,10 +29,13 @@ from minhos.dashboard.api import router as api_router
 from minhos.dashboard.api_enhanced import router as enhanced_api_router
 from minhos.dashboard.websocket_chat import websocket_router as chat_router
 from minhos.dashboard.api_trading import router as trading_router
+<<<<<<< HEAD
 from minhos.dashboard.api_ml_performance import router as ml_performance_router
 from minhos.dashboard.api_ml_pipeline import router as ml_pipeline_router
 from minhos.dashboard.api_kelly import router as kelly_router
 from minhos.dashboard.api_risk_validation_fastapi import router as risk_validation_router
+=======
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
 from minhos.services import (
     get_market_data_service, get_state_manager, 
     get_ai_brain_service, get_trading_engine
@@ -70,12 +73,16 @@ templates = Jinja2Templates(directory=str(templates_dir))
 
 # Include API routes
 app.include_router(api_router, prefix="/api")
+<<<<<<< HEAD
 app.include_router(enhanced_api_router, prefix="/api")  # Enhanced API routes  
 app.include_router(trading_router)  # Trading API routes
 app.include_router(ml_performance_router)  # ML Performance API routes
 app.include_router(ml_pipeline_router)  # ML Pipeline API routes
 app.include_router(kelly_router)  # Kelly Criterion API routes
 app.include_router(risk_validation_router)  # Risk Validation API routes - Phase 3
+=======
+app.include_router(trading_router)  # Trading API routes
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
 
 # Include WebSocket chat routes
 app.include_router(chat_router)

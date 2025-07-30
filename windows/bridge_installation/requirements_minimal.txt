@@ -3,5 +3,9 @@ fastapi==0.95.0
 uvicorn==0.20.0
 websockets==11.0
 requests==2.31.0
+<<<<<<< HEAD
 python-multipart==0.0.6
 watchdog==3.0.0 
+=======
+python-multipart==0.0.6 
+>>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
