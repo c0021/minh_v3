@@ -83,7 +83,7 @@ class MultiChartCollector(BaseService):
     """Collects and analyzes data from multiple Sierra Chart symbols/timeframes"""
     
     def __init__(self, sierra_client: SierraClient):
-        super().__init__("multi_chart_collector", 9004)
+        super().__init__("multi_chart_collector")
         self.sierra_client = sierra_client
         
         # Chart configurations matching your Sierra Chart setup

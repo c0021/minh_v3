@@ -48,7 +48,7 @@ from .ai_brain_service import (
     get_ai_brain_service,
     get_ai_status  # Legacy compatibility
 )
-from .trading_engine import (
+from .trading_service import (
     TradingEngine,
     DecisionPriority,
     MarketRegime,

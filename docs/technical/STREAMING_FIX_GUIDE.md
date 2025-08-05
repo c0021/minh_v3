@@ -25,7 +25,7 @@ from src.services.sierra_client_optimized import OptimizedSierraClient
 
 # Replace your current polling implementation
 client = OptimizedSierraClient(
-    bridge_url="http://cthinkpad:8765",
+    bridge_url="http://marypc:8765",
     db_connection=your_db_instance
 )
 
@@ -68,7 +68,7 @@ If TCP optimizations aren't sufficient, use SSE implementation:
 
 ### Step 1: Apply TCP Optimizations
 
-**On Windows PC (cthinkpad):**
+**On Windows PC (marypc):**
 ```batch
 cd C:\path\to\minh_v3\scripts
 tcp_optimize_windows.bat
@@ -87,7 +87,7 @@ Replace your current Sierra Client implementation:
 ```python
 # OLD (problematic)
 while True:
-    response = requests.get("http://cthinkpad:8765/api/market_data")
+    response = requests.get("http://marypc:8765/api/market_data")
     process_data(response.json())
     time.sleep(1)
 

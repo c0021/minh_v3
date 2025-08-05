@@ -6,32 +6,39 @@ MinhOS v3 Configuration - Network and Bridge Settings
 import os
 from pathlib import Path
 
-<<<<<<< HEAD
+# Load environment variables from .env file if it exists
+env_file = Path(__file__).parent / ".env"
+if env_file.exists():
+    try:
+        with open(env_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    # Remove quotes if present
+                    if value.startswith('"') and value.endswith('"'):
+                        value = value[1:-1]
+                    elif value.startswith("'") and value.endswith("'"):
+                        value = value[1:-1]
+                    os.environ[key] = value
+    except Exception as e:
+        print(f"Warning: Failed to load .env file: {e}")
+
 # Bridge Configuration  
-# Updated to use MaryPC Tailscale IP (100.123.37.79)
+# Updated to use MaryPC from .env or fallback to Tailscale IP
 BRIDGE_HOSTNAME = os.getenv("BRIDGE_HOSTNAME", "100.123.37.79")
-=======
-# Bridge Configuration
-# Updated to use Windows host IP from WSL (172.21.128.1)
-BRIDGE_HOSTNAME = os.getenv("BRIDGE_HOSTNAME", "172.21.128.1")
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
 BRIDGE_PORT = int(os.getenv("BRIDGE_PORT", "8765"))
 BRIDGE_URL = f"http://{BRIDGE_HOSTNAME}:{BRIDGE_PORT}"
 
 # Alternative IPs if hostname doesn't work
 BRIDGE_IPS = [
-<<<<<<< HEAD
     "100.123.37.79", # MaryPC Tailscale IP (current working)
-    "100.85.224.58", # CThinkPad Tailscale IP (fallback)
+    "100.85.224.58", # MaryPC Tailscale IP (fallback)
     "172.21.128.1",  # Windows host IP from WSL (fallback)
     "marypc",        # MaryPC hostname (fallback)
-    "cthinkpad",     # CThinkPad hostname (fallback)
-=======
-    "172.21.128.1",  # Windows host IP from WSL (current working)
-    "cthinkpad",     # Original hostname (fallback)
-    "100.64.0.1",    # Example Tailscale IP - replace with actual
-    "192.168.1.100", # Example local IP - replace with actual
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
+    "marypc",     # MaryPC hostname (fallback)
 ]
 
 # Connection settings

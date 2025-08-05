@@ -31,13 +31,13 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 
-from minhos.core.base_service import BaseService
+from minhos.core.base_service import BaseService, ServiceStatus
 from minhos.core.config import config
 from minhos.services.sierra_client import SierraClient, TradeCommand
 from minhos.services.multi_chart_collector import MultiChartCollector
 from minhos.services.state_manager import StateManager
 from minhos.services.risk_manager import RiskManager
-from minhos.services.trading_engine import TradingEngine, TradingDecision
+from minhos.services.trading_service import TradingService as TradingEngine, TradingDecision
 from minhos.services.ai_brain_service import AIBrainService
 from minhos.services.sierra_historical_data import SierraHistoricalDataService
 from minhos.dashboard.main import DashboardServer
@@ -74,7 +74,7 @@ class LiveTradingIntegration(BaseService):
     """Orchestrates all MinhOS services for live trading"""
     
     def __init__(self):
-        super().__init__("live_trading_integration", 9005)
+        super().__init__("live_trading_integration")
         self.config = config
         
         # Service instances
@@ -431,13 +431,13 @@ class LiveTradingIntegration(BaseService):
                     health_checks['multi_chart_collector'] = self.multi_chart_collector.get_status()
                 
                 if self.ai_brain:
-                    health_checks['ai_brain'] = {'running': self.ai_brain.running}
+                    health_checks['ai_brain'] = {'running': getattr(self.ai_brain, 'status', None) == ServiceStatus.RUNNING}
                 
                 if self.risk_manager:
-                    health_checks['risk_manager'] = {'running': self.risk_manager.running}
+                    health_checks['risk_manager'] = {'running': getattr(self.risk_manager, 'status', None) == ServiceStatus.RUNNING}
                 
                 if self.trading_engine:
-                    health_checks['trading_engine'] = {'running': self.trading_engine.running}
+                    health_checks['trading_engine'] = {'running': getattr(self.trading_engine, 'status', None) == ServiceStatus.RUNNING}
                 
                 self.system_health_checks = health_checks
                 

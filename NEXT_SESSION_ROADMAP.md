@@ -17,7 +17,7 @@
 - **Symbol Management**: Centralized system working with automatic rollover logic
 
 ### ✅ System Architecture Status
-- **Bridge Connection**: ✅ Sierra Chart connected (http://cthinkpad:8765)
+- **Bridge Connection**: ✅ Sierra Chart connected (http://marypc:8765)
 - **Core Services**: ✅ State Manager, Risk Manager, AI Brain, Trading Engine active
 - **Data Storage**: ✅ All databases operational and receiving data
 - **Symbol Management**: ✅ Revolutionary centralized system operational
@@ -71,7 +71,7 @@
   - [x] Successfully restarted MinhOS with full monitoring
   - [x] Verified all 12 databases operational
 - [x] **Data Pipeline Validation**
-  - [x] Bridge connection stable (http://cthinkpad:8765)
+  - [x] Bridge connection stable (http://marypc:8765)
   - [x] Market data flowing (NQU25-CME @ $23544.25)
   - [x] 3 symbols streaming (NQU25-CME, ESU25-CME, VIX_CGI)
 - [x] **System Component Verification**

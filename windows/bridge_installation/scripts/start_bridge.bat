@@ -1,0 +1,194 @@
+@echo off
+REM MinhOS Sierra Chart Bridge Startup Script - ENHANCED VERSION
+REM This version includes auto-restart logic for request limits and other failures
+
+echo ========================================
+echo MinhOS Sierra Chart Bridge v3.1.0
+echo Enhanced with Auto-Restart Capability
+echo ========================================
+echo.
+
+REM Get current directory and set parent directory for bridge files
+set SCRIPT_DIR=%~dp0
+set BRIDGE_DIR=%SCRIPT_DIR%..\
+
+echo Current directory: %CD%
+echo.
+
+REM Check if Python is available
+py --version >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Python is not installed or not in PATH
+    echo Please install Python 3.8+ and ensure it's added to PATH
+    echo Download from: https://python.org/downloads/
+    pause
+    exit /b 1
+)
+
+echo Python version:
+py --version
+echo.
+
+REM Change to bridge directory for operations
+cd /d "%BRIDGE_DIR%"
+echo Bridge directory: %CD%
+echo.
+
+REM Check if virtual environment exists
+if not exist "venv" (
+    echo Creating Python virtual environment...
+    py -m venv venv
+    if errorlevel 1 (
+        echo ERROR: Failed to create virtual environment
+        pause
+        exit /b 1
+    )
+    echo Virtual environment created successfully
+    echo.
+)
+
+REM Activate virtual environment
+echo Activating virtual environment...
+call venv\Scripts\activate.bat
+if errorlevel 1 (
+    echo ERROR: Failed to activate virtual environment
+    pause
+    exit /b 1
+)
+
+echo Virtual environment activated
+echo.
+
+REM Check if requirements are installed
+echo Checking dependencies...
+pip show fastapi >nul 2>&1
+if errorlevel 1 (
+    echo Installing Python dependencies...
+    pip install -r requirements.txt
+    if errorlevel 1 (
+        echo ERROR: Failed to install dependencies
+        echo Please check your internet connection and try again
+        pause
+        exit /b 1
+    )
+    echo Dependencies installed successfully
+) else (
+    echo Dependencies already installed
+)
+echo.
+
+REM Check if required files exist
+if not exist "bridge.py" (
+    echo ERROR: bridge.py not found
+    echo Please ensure all bridge files are present
+    pause
+    exit /b 1
+)
+
+if not exist "file_access_api.py" (
+    echo ERROR: file_access_api.py not found
+    echo Please ensure all bridge files are present
+    pause
+    exit /b 1
+)
+
+REM Set environment variables for better performance
+set PYTHONUNBUFFERED=1
+set PYTHONDONTWRITEBYTECODE=1
+
+REM Log startup information
+echo ========================================
+echo Starting MinhOS Bridge Service
+echo ========================================
+echo Date/Time: %date% %time%
+echo Bridge Directory: %CD%
+echo Python Path: %VIRTUAL_ENV%
+echo.
+echo Available Endpoints:
+echo   Health Check: http://localhost:8765/health
+echo   Status: http://localhost:8765/status
+echo   Market Data: http://localhost:8765/api/market_data
+echo   File Access: http://localhost:8765/api/file/list
+echo   WebSocket: ws://localhost:8765/ws/market_data
+echo.
+echo Press Ctrl+C to stop the bridge service
+echo ========================================
+echo.
+
+REM Check if port 8765 is already in use
+echo Checking if port 8765 is available...
+netstat -ano | findstr :8765 >nul 2>&1
+if not errorlevel 1 (
+    echo.
+    echo WARNING: Port 8765 is already in use!
+    echo.
+    echo Processes using port 8765:
+    netstat -ano | findstr :8765
+    echo.
+    echo To kill the process, use: taskkill /PID [process_id] /F
+    echo Or press K to kill all processes using port 8765 automatically
+    echo.
+    choice /c KC /n /m "K - Kill processes using port 8765, C - Continue anyway: "
+    if errorlevel 1 (
+        echo Killing processes using port 8765...
+        for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8765') do (
+            taskkill /PID %%a /F >nul 2>&1
+        )
+        echo Port 8765 should now be available
+        echo.
+    )
+)
+
+REM Start the bridge with enhanced error handling
+:START_BRIDGE
+py bridge.py
+set EXIT_CODE=%errorlevel%
+
+echo.
+echo ========================================
+echo Bridge service stopped (Exit code: %EXIT_CODE%)
+echo ========================================
+
+if %EXIT_CODE%==0 (
+    echo Bridge stopped normally
+) else (
+    echo Bridge stopped with error code: %EXIT_CODE%
+    echo.
+    echo Common solutions:
+    echo - Check if Sierra Chart is running
+    echo - Verify Tailscale connectivity
+    echo - Ensure port 8765 is not in use
+    echo - Check bridge.log for detailed error information
+)
+
+echo.
+echo Options:
+echo   R - Restart bridge service
+echo   L - View last 20 lines of log file
+echo   Q - Quit
+echo.
+
+choice /c RLQ /n /m "Enter your choice (R/L/Q): "
+if errorlevel 3 goto :END
+if errorlevel 2 goto :VIEW_LOG
+if errorlevel 1 goto :START_BRIDGE
+
+:VIEW_LOG
+echo.
+echo ========================================
+echo Last 20 lines of bridge.log:
+echo ========================================
+if exist "bridge.log" (
+    powershell "Get-Content bridge.log -Tail 20"
+) else (
+    echo Log file not found
+)
+echo ========================================
+echo.
+pause
+goto :START_BRIDGE
+
+:END
+echo.
+echo Thank you for using MinhOS Bridge Service!
+pause

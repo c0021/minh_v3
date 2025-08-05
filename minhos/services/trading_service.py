@@ -30,7 +30,7 @@ from enum import Enum
 import numpy as np
 
 # Core MinhOS imports
-from minhos.core.base_service import BaseService
+from minhos.core.base_service import BaseService, ServiceStatus
 from minhos.core.config import config
 
 # Service imports
@@ -793,7 +793,7 @@ class TradingService(BaseService):
             # Check service status
             services_running = {}
             for name, service in self._running_services.items():
-                services_running[name] = getattr(service, '_running', True)
+                services_running[name] = getattr(service, 'status', None) == ServiceStatus.RUNNING if hasattr(service, 'status') else True
             
             # Collect errors
             errors = []
@@ -851,9 +851,27 @@ class TradingService(BaseService):
         """Get current trading service status"""
         return asdict(self.status)
 
+    @property
+    def running(self) -> bool:
+        """Check if trading service is running"""
+        return self._running
+    
+    async def health_check(self) -> Dict[str, Any]:
+        """Health check for the trading service"""
+        return {
+            "healthy": self._running,
+            "running": self._running,
+            "services": self.status.services_running,
+            "last_update": self.status.last_update.isoformat() if self.status.last_update else None
+        }
+
     async def get_decisions(self) -> List[Dict[str, Any]]:
         """Get active trading decisions"""
         return [asdict(decision) for decision in self.active_decisions.values()]
+
+    def get_pending_decisions(self) -> List[TradingDecision]:
+        """Get all pending decisions (synchronous method for compatibility)"""
+        return [decision for decision in self.active_decisions.values() if not decision.resolved]
 
     async def resolve_decision(self, decision_id: str, resolution: str):
         """Resolve a trading decision"""
@@ -935,6 +953,10 @@ def get_trading_service() -> TradingService:
     if _trading_service_instance is None:
         _trading_service_instance = TradingService()
     return _trading_service_instance
+
+# Compatibility aliases for legacy code
+TradingEngine = TradingService
+get_trading_engine = get_trading_service
 
 async def create_trading_service() -> TradingService:
     """Create and start a new trading service instance"""

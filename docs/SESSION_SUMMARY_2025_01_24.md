@@ -135,7 +135,7 @@ Rule-based parsing (emergency fallback)
 - **Session Documentation**: Recorded real trading as core requirement
 
 ### System Verification
-- **Bridge Connection**: ✅ Connected to `http://cthinkpad:8765`
+- **Bridge Connection**: ✅ Connected to `http://marypc:8765`
 - **Trading Mode**: ✅ "Controlled by Sierra Chart" (no paper trading defaults)
 - **Market Data**: ✅ Real-time streaming from Sierra Chart
 - **Execution**: ✅ Live trade execution through bridge
@@ -151,7 +151,7 @@ Rule-based parsing (emergency fallback)
 ║          Advanced AI Trading Integration          ║
 ╚═══════════════════════════════════════════════════════╝
 
-✅ Bridge connected: http://cthinkpad:8765
+✅ Bridge connected: http://marypc:8765
 ✅ All services started successfully
 ✅ Dashboard serving at http://localhost:8000
 ✅ Chat interface operational

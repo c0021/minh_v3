@@ -11,7 +11,7 @@ import json
 
 def test_file_access():
     """Test bridge file access API"""
-    bridge_url = "http://cthinkpad:8765"
+    bridge_url = "http://marypc:8765"
     
     print("🌉 Testing Bridge File Access API")
     print("=" * 40)

@@ -10,7 +10,7 @@ import requests
 
 def test_sierra_files():
     """Test access to discovered Sierra Chart files"""
-    bridge_url = "http://cthinkpad:8765"
+    bridge_url = "http://marypc:8765"
     
     print("🧪 Testing Discovered Sierra Chart Files")
     print("=" * 50)

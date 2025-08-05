@@ -18,26 +18,29 @@ import requests
 import time
 import json
 import subprocess
+import sys
+from pathlib import Path
 
-# Try different bridge URLs
-BRIDGE_URLS = [
-    "http://cthinkpad:8765",
-    "http://localhost:8765", 
-    "http://127.0.0.1:8765",
-]
+# Add project root to path to import config
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-# Get Windows host IP from WSL
 try:
-    result = subprocess.run(['ip', 'route', 'show'], capture_output=True, text=True)
-    for line in result.stdout.split('\n'):
-        if 'default via' in line:
-            windows_ip = line.split('via')[1].split()[0]
-            BRIDGE_URLS.insert(0, f"http://{windows_ip}:8765")
-            break
-except:
-    pass
-
-BRIDGE_URL = BRIDGE_URLS[0]  # Default to first URL
+    from config import BRIDGE_URL, BRIDGE_IPS, BRIDGE_PORT
+    # Build URLs from config
+    BRIDGE_URLS = [BRIDGE_URL]
+    for ip in BRIDGE_IPS:
+        url = f"http://{ip}:{BRIDGE_PORT}"
+        if url not in BRIDGE_URLS:
+            BRIDGE_URLS.append(url)
+except ImportError:
+    # Fallback if config not available
+    BRIDGE_URLS = [
+        "http://100.123.37.79:8765",  # MaryPC Tailscale
+        "http://172.21.128.1:8765",    # Windows host from WSL
+        "http://localhost:8765", 
+        "http://127.0.0.1:8765",
+    ]
+    BRIDGE_URL = BRIDGE_URLS[0]
 
 def test_endpoint(url, description):
     """Test a specific endpoint"""
@@ -101,12 +104,16 @@ def main():
         print(f"\n✅ MinhOS can now connect to: {BRIDGE_URL}")
         
         # Check if config needs updating
-        if "172.21.128.1" in BRIDGE_URL and "cthinkpad" not in BRIDGE_URL:
-            print(f"\n⚠️  CONFIGURATION UPDATE NEEDED:")
-            print(f"   The bridge is working at {BRIDGE_URL}")
-            print(f"   But MinhOS is configured to use 'cthinkpad'")
-            print(f"   Update config.py or set environment variable:")
-            print(f"   export BRIDGE_HOSTNAME='172.21.128.1'")
+        try:
+            from config import BRIDGE_HOSTNAME
+            if BRIDGE_HOSTNAME not in BRIDGE_URL:
+                print(f"\n⚠️  CONFIGURATION MISMATCH:")
+                print(f"   The bridge is working at {BRIDGE_URL}")
+                print(f"   But config.py is set to use {BRIDGE_HOSTNAME}")
+                print(f"   Update config.py or set environment variable:")
+                print(f"   export BRIDGE_HOSTNAME='{BRIDGE_URL.split('//')[1].split(':')[0]}'")
+        except ImportError:
+            pass
         
         return
     

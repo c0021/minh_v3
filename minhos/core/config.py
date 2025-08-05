@@ -44,7 +44,7 @@ load_env_file()
 @dataclass
 class SierraConfig:
     """Sierra Chart bridge configuration"""
-    host: str = "trading-pc"  # Tailscale hostname
+    host: str = os.getenv("BRIDGE_HOSTNAME", "100.123.37.79")  # Use environment variable or Tailscale IP
     port: int = 8765
     timeout: int = 30
     retry_attempts: int = 3

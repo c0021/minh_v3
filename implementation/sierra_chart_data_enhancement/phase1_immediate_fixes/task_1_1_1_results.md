@@ -14,14 +14,14 @@
 ### **API Test Results**
 ```bash
 # Working file
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/NQU25-CME.dly"
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/NQU25-CME.dly"
 → Returns CSV data successfully
 
 # Failing files  
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/ESU25-CME.dly"
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/ESU25-CME.dly"
 → {"error":"File not found","timestamp":"2025-07-24T15:40:15.499700"}
 
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/YMU25-CME.dly"  
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/YMU25-CME.dly"  
 → {"error":"File not found","timestamp":"2025-07-24T15:40:20.580206"}
 ```
 

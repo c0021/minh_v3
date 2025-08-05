@@ -272,7 +272,7 @@ class SierraClient(BaseService):
     """Sierra Chart client service for live trading integration"""
     
     def __init__(self):
-        super().__init__("sierra_client", 9003)  # WebSocket port for market data relay
+        super().__init__("sierra_client")
         self.config = config
         
         # Bridge connection settings - check multiple sources
@@ -330,7 +330,7 @@ class SierraClient(BaseService):
                 logger.debug(f"Could not read .env file: {e}")
         
         # 3. Default fallback
-        return 'cthinkpad'
+        return '100.123.37.79'  # MaryPC Tailscale IP
     
     def _get_bridge_port(self) -> int:
         """Get bridge port from multiple sources"""
@@ -582,7 +582,6 @@ class SierraClient(BaseService):
         
         # More importantly - check if we're actually getting market data
         try:
-<<<<<<< HEAD
             # Get primary symbol for health check from centralized management
             from ..core.symbol_integration import get_symbol_integration
             symbol_integration = get_symbol_integration()
@@ -590,17 +589,13 @@ class SierraClient(BaseService):
             
             # Test if we can get actual market data (not just health ping)
             async with self.session.get(f"{self.bridge_url}/api/data/{primary_symbol}", timeout=5) as resp:
-=======
-            # Test if we can get actual market data (not just health ping)
-            async with self.session.get(f"{self.bridge_url}/api/data/NQU25-CME", timeout=5) as resp:
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                 if resp.status == 200:
                     data = await resp.json()
                     # Verify we got real data, not empty/cached
-                    if data.get('price', 0) > 0 and data.get('timestamp'):
+                    if data.get('last_price', 0) > 0 and data.get('timestamp'):
                         return True
                     else:
-                        logger.warning("Bridge responding but no real market data (price=0 or no timestamp)")
+                        logger.warning(f"Bridge responding but no real market data (last_price={data.get('last_price', 0)} or no timestamp)")
                         return False
                 else:
                     logger.warning(f"Bridge health OK but market data endpoint failed: {resp.status}")
@@ -700,20 +695,16 @@ class SierraClient(BaseService):
             async with self.session.get(f"{self.bridge_url}/api/market_data", timeout=5) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-<<<<<<< HEAD
                     
                     # Get expected symbols from centralized management
                     from ..core.symbol_integration import get_symbol_integration
                     symbol_integration = get_symbol_integration()
                     expected_symbols = set(symbol_integration.get_bridge_symbols())
                     
-=======
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                     # Convert all symbols to MarketData objects
                     result = {}
                     for symbol, symbol_data in data.items():
                         try:
-<<<<<<< HEAD
                             # Validate symbol is expected (log warning if unexpected)
                             if symbol not in expected_symbols:
                                 logger.debug(f"Bridge providing unexpected symbol: {symbol}")
@@ -728,11 +719,6 @@ class SierraClient(BaseService):
                     if missing_symbols:
                         logger.warning(f"Bridge missing expected symbols: {missing_symbols}")
                     
-=======
-                            result[symbol] = MarketData.from_sierra_data(symbol_data)
-                        except Exception as e:
-                            logger.error(f"Failed to parse market data for {symbol}: {e}")
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                     return result
                 else:
                     return {}

@@ -1,0 +1,38 @@
+REM Copy these commands and run in Administrator Command Prompt
+REM ============================================================
+
+cd /d "C:\Users\colin\Sync\minh_v4\windows\bridge_installation"
+
+REM Stop any existing bridge processes
+taskkill /f /im python.exe /fi "WINDOWTITLE eq MinhOS*" 2>nul
+
+REM Delete existing service if it exists
+sc stop MinhOSBridge 2>nul
+sc delete MinhOSBridge 2>nul
+
+REM Create the Windows Service
+sc create MinhOSBridge binPath= "\"C:\Users\colin\Sync\minh_v4\windows\bridge_installation\venv\Scripts\python.exe\" \"C:\Users\colin\Sync\minh_v4\windows\bridge_installation\bridge_service.py\"" DisplayName= "MinhOS Sierra Chart Bridge" start= auto obj= LocalSystem
+
+REM Configure service description
+sc description MinhOSBridge "MinhOS Bridge for Sierra Chart market data integration with auto-restart capabilities"
+
+REM Configure auto-restart policy
+sc failure MinhOSBridge reset= 86400 actions= restart/5000/restart/10000/restart/30000
+
+REM Create logs directory
+mkdir "C:\Users\colin\Sync\minh_v4\windows\bridge_installation\logs" 2>nul
+
+REM Start the service
+sc start MinhOSBridge
+
+REM Show service status
+sc query MinhOSBridge
+
+echo.
+echo ========================================
+echo Service Installation Complete!
+echo ========================================
+echo The MinhOS Bridge is now running as a Windows Service
+echo and will automatically start when Windows boots.
+echo.
+pause

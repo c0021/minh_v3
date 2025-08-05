@@ -18,7 +18,7 @@
 ### **2. Verify System Status**
 ```bash
 # Quick health check:
-curl http://cthinkpad:8765/health
+curl http://marypc:8765/health
 # Should return: {"status":"healthy"...}
 ```
 
@@ -27,7 +27,7 @@ curl http://cthinkpad:8765/health
 
 **First Test**:
 ```bash
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/ESZ25-CME.dly"
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/ESZ25-CME.dly"
 ```
 
 ---

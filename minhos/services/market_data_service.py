@@ -111,7 +111,7 @@ class MarketDataService(BaseService):
     
     def __init__(self, ws_port: int = 9001, http_port: int = 9002, sierra_port: int = 9003):
         """Initialize consolidated market data service"""
-        super().__init__("market_data_service", sierra_port)
+        super().__init__("market_data_service")
         
         # Port configuration
         self.ws_port = ws_port

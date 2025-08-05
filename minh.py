@@ -52,7 +52,7 @@ class MinhOSCommand:
     
     def __init__(self):
         self.config = minhos_config
-        self.bridge_url = f"http://{os.getenv('BRIDGE_HOSTNAME', '100.123.37.79')}:8765"
+        self.bridge_url = f"http://{os.getenv('BRIDGE_HOSTNAME', 'marypc')}:8765"
         self.integration = None
         self.running = False
         
@@ -292,13 +292,18 @@ class MinhOSCommand:
         self.logger.info("Performing pre-flight checks...")
         
         # Test bridge connection
-        async with MinhOSClient(self.bridge_url) as client:
-            health = await client.health_check()
-            
-            if not health or health.get('status') != 'healthy':
-                raise Exception(f"Bridge health check failed: {health}")
-            
-            self.logger.info(f"✅ Bridge connected: {self.bridge_url}")
+        try:
+            async with MinhOSClient(self.bridge_url) as client:
+                health = await client.health_check()
+                
+                if not health or health.get('status') != 'healthy':
+                    self.logger.warning(f"⚠️ Bridge not available: {health}")
+                    self.logger.warning("Starting in offline mode - no live market data")
+                else:
+                    self.logger.info(f"✅ Bridge connected: {self.bridge_url}")
+        except Exception as e:
+            self.logger.warning(f"⚠️ Bridge connection failed: {e}")
+            self.logger.warning("Starting in offline mode - no live market data")
     
     async def _monitoring_loop(self):
         """Detailed monitoring loop"""

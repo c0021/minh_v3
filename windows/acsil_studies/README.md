@@ -85,8 +85,8 @@ Expected files:
 ## Python Bridge Integration
 
 The MinhOS Python bridge automatically reads these JSON files and serves the data via:
-- REST API: `GET http://cthinkpad:8765/api/market_data`
-- WebSocket: `ws://cthinkpad:8765/ws/market_data`
+- REST API: `GET http://marypc:8765/api/market_data`
+- WebSocket: `ws://marypc:8765/ws/market_data`
 
 Files are checked every 100ms and must be less than 10 seconds old to be considered valid.
 

@@ -18,6 +18,8 @@ import sqlite3
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
+
+from minhos.core.base_service import ServiceStatus
 from dataclasses import asdict
 from enum import Enum
 
@@ -221,15 +223,15 @@ class APIServer(BaseService):
                 # Collect service status
                 services = {}
                 if self.sierra_client:
-                    services["sierra_client"] = getattr(self.sierra_client, '_running', False)
+                    services["sierra_client"] = getattr(self.sierra_client, 'status', None) == ServiceStatus.RUNNING
                 if self.state_manager:
-                    services["state_manager"] = getattr(self.state_manager, '_running', False)
+                    services["state_manager"] = getattr(self.state_manager, 'status', None) == ServiceStatus.RUNNING
                 if self.ai_brain:
-                    services["ai_brain"] = getattr(self.ai_brain, '_running', False)
+                    services["ai_brain"] = getattr(self.ai_brain, 'status', None) == ServiceStatus.RUNNING
                 if self.risk_manager:
-                    services["risk_manager"] = getattr(self.risk_manager, '_running', False)
+                    services["risk_manager"] = getattr(self.risk_manager, 'status', None) == ServiceStatus.RUNNING
                 if self.trading_service:
-                    services["trading_service"] = getattr(self.trading_service, '_running', False)
+                    services["trading_service"] = getattr(self.trading_service, 'status', None) == ServiceStatus.RUNNING
                 
                 # Calculate uptime
                 uptime = (datetime.now() - self.start_time).total_seconds()
@@ -684,15 +686,15 @@ class APIServer(BaseService):
         try:
             services = {}
             if self.sierra_client:
-                services["sierra_client"] = getattr(self.sierra_client, '_running', False)
+                services["sierra_client"] = getattr(self.sierra_client, 'status', None) == ServiceStatus.RUNNING
             if self.state_manager:
-                services["state_manager"] = getattr(self.state_manager, '_running', False)
+                services["state_manager"] = getattr(self.state_manager, 'status', None) == ServiceStatus.RUNNING
             if self.ai_brain:
-                services["ai_brain"] = getattr(self.ai_brain, '_running', False)
+                services["ai_brain"] = getattr(self.ai_brain, 'status', None) == ServiceStatus.RUNNING
             if self.risk_manager:
-                services["risk_manager"] = getattr(self.risk_manager, '_running', False)
+                services["risk_manager"] = getattr(self.risk_manager, 'status', None) == ServiceStatus.RUNNING
             if self.trading_service:
-                services["trading_service"] = getattr(self.trading_service, '_running', False)
+                services["trading_service"] = getattr(self.trading_service, 'status', None) == ServiceStatus.RUNNING
             
             return {
                 "status": "operational" if any(services.values()) else "starting",

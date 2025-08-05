@@ -96,7 +96,7 @@ minhos_v3_redesigned/
 
 NETWORK_CONFIG = {
     "sierra_bridge": {
-        "host": "cthinkpad",         # From sierra_client.py, bridge.py, etc.
+        "host": "marypc",         # From sierra_client.py, bridge.py, etc.
         "port": 8765,                # From multiple services
         "timeout": 5000              # From connection handlers
     },

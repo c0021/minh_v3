@@ -74,7 +74,7 @@ python3 test_production_validation.py
 ## ✅ **PRE-DEPLOYMENT VERIFICATION**
 
 ### **System Health** ✅
-- [x] Bridge connection stable (http://cthinkpad:8765)
+- [x] Bridge connection stable (http://marypc:8765)
 - [x] Market data flowing (NQU25-CME @ $23,447.75)
 - [x] All critical services operational
 - [x] ML Pipeline loaded and ready

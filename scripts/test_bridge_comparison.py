@@ -13,21 +13,33 @@ import aiohttp
 import requests
 from collections import defaultdict
 import sys
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from config import BRIDGE_HOSTNAME, BRIDGE_PORT, BRIDGE_IPS
 
 class BridgeComparator:
     def __init__(self):
+        # Use the primary bridge from config and test against fallback IPs
         self.bridges = {
-            'cthinkpad': {
-                'ip': '172.21.128.1',
-                'port': 8765,
-                'name': 'CThinkPad (Current)'
-            },
-            'marypc': {
-                'ip': '100.123.37.79',
-                'port': 8765,
-                'name': 'MaryPC (New)'
+            'primary': {
+                'ip': BRIDGE_HOSTNAME,
+                'port': BRIDGE_PORT,
+                'name': f'Primary ({BRIDGE_HOSTNAME})'
             }
         }
+        
+        # Add fallback bridges for comparison if different from primary
+        for i, ip in enumerate(BRIDGE_IPS[:2]):
+            if ip != BRIDGE_HOSTNAME:
+                self.bridges[f'fallback_{i}'] = {
+                    'ip': ip,
+                    'port': BRIDGE_PORT,
+                    'name': f'Fallback {i+1} ({ip})'
+                }
+        
         self.test_results = defaultdict(dict)
         
     async def test_bridge(self, bridge_key: str, bridge_info: Dict) -> Dict:
@@ -245,43 +257,47 @@ class BridgeComparator:
         print("📊 BRIDGE COMPARISON RESULTS")
         print("="*80)
         
-        # Header
-        print(f"\n{'Metric':<25} {'CThinkPad':<25} {'MaryPC':<25}")
+        # Get bridge keys dynamically
+        bridge_keys = list(results.keys())
+        
+        # Header - use actual bridge names
+        if len(bridge_keys) >= 2:
+            print(f"\n{'Metric':<25} {self.bridges[bridge_keys[0]]['name']:<25} {self.bridges[bridge_keys[1]]['name']:<25}")
+        else:
+            print(f"\n{'Metric':<25} {self.bridges[bridge_keys[0]]['name']:<25}")
         print("-"*75)
         
-        # Connectivity
-        for key, result in results.items():
-            status = "✅ Connected" if result['reachable'] else "❌ Unreachable"
-            if key == 'cthinkpad':
-                cthinkpad_status = status
-            else:
-                marypc_status = status
-        print(f"{'Connectivity':<25} {cthinkpad_status:<25} {marypc_status:<25}")
+        # Print metrics for each bridge
+        metrics = [
+            ('Connectivity', lambda r: "✅ Connected" if r['reachable'] else "❌ Unreachable"),
+            ('Average Latency', lambda r: f"{r['latency_ms']:.1f}ms" if r['latency_ms'] else "N/A"),
+            ('Data Freshness', lambda r: f"{r['data_freshness']:.1f}s" if r['data_freshness'] else "N/A"),
+            ('Update Frequency', lambda r: f"{r['update_frequency']:.1f} ticks/s" if r['update_frequency'] else "N/A"),
+            ('Errors', lambda r: str(len(r['errors'])))
+        ]
         
-        # Latency
-        ct_latency = f"{results['cthinkpad']['latency_ms']:.1f}ms" if results['cthinkpad']['latency_ms'] else "N/A"
-        mp_latency = f"{results['marypc']['latency_ms']:.1f}ms" if results['marypc']['latency_ms'] else "N/A"
-        print(f"{'Average Latency':<25} {ct_latency:<25} {mp_latency:<25}")
-        
-        # Data Freshness
-        ct_fresh = f"{results['cthinkpad']['data_freshness']:.1f}s" if results['cthinkpad']['data_freshness'] else "N/A"
-        mp_fresh = f"{results['marypc']['data_freshness']:.1f}s" if results['marypc']['data_freshness'] else "N/A"
-        print(f"{'Data Freshness':<25} {ct_fresh:<25} {mp_fresh:<25}")
-        
-        # Update Frequency
-        ct_freq = f"{results['cthinkpad']['update_frequency']:.1f} ticks/s" if results['cthinkpad']['update_frequency'] else "N/A"
-        mp_freq = f"{results['marypc']['update_frequency']:.1f} ticks/s" if results['marypc']['update_frequency'] else "N/A"
-        print(f"{'Update Frequency':<25} {ct_freq:<25} {mp_freq:<25}")
-        
-        # Error Count
-        ct_errors = len(results['cthinkpad']['errors'])
-        mp_errors = len(results['marypc']['errors'])
-        print(f"{'Errors':<25} {str(ct_errors):<25} {str(mp_errors):<25}")
+        for metric_name, format_func in metrics:
+            values = []
+            for key in bridge_keys[:2]:  # Compare up to 2 bridges
+                if key in results:
+                    values.append(format_func(results[key]))
+            
+            if len(values) >= 2:
+                print(f"{metric_name:<25} {values[0]:<25} {values[1]:<25}")
+            elif len(values) == 1:
+                print(f"{metric_name:<25} {values[0]:<25}")
         
         # Scores
-        ct_score = f"{analysis['scores']['cthinkpad']['percentage']:.1f}%"
-        mp_score = f"{analysis['scores']['marypc']['percentage']:.1f}%"
-        print(f"{'Overall Score':<25} {ct_score:<25} {mp_score:<25}")
+        score_strs = []
+        for bridge_key in self.bridges.keys():
+            if bridge_key in analysis['scores']:
+                score_str = f"{analysis['scores'][bridge_key]['percentage']:.1f}%"
+                score_strs.append(score_str)
+        
+        if len(score_strs) >= 2:
+            print(f"{'Overall Score':<25} {score_strs[0]:<25} {score_strs[1]:<25}")
+        elif len(score_strs) == 1:
+            print(f"{'Overall Score':<25} {score_strs[0]:<25}")
         
         print("\n" + "="*80)
         print(f"🏆 RECOMMENDATION: {analysis['recommendation']}")

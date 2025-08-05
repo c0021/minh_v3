@@ -136,7 +136,7 @@ class MinhOSCommand:
     
     def __init__(self):
         self.config = minhos_config
-        self.bridge_url = f"http://{os.getenv('BRIDGE_HOSTNAME', 'cthinkpad')}:8765"
+        self.bridge_url = f"http://{os.getenv('BRIDGE_HOSTNAME', 'marypc')}:8765"
         self.integration = None
         self.running = False
         

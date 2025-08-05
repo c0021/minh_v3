@@ -4,9 +4,9 @@ This guide helps you switch your MinhOS installation to connect to Sierra Chart 
 
 ## Current Configuration
 
-- **Current Bridge Host**: `cthinkpad` (100.85.224.58)
+- **Current Bridge Host**: `marypc` (100.123.37.79)
 - **Bridge Port**: 8765
-- **Bridge URL**: http://cthinkpad:8765
+- **Bridge URL**: http://marypc:8765
 
 ## Steps to Reconfigure for New Windows Machine
 

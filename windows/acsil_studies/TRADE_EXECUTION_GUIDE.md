@@ -94,14 +94,14 @@ trade_request = {
     "order_type": "LIMIT"
 }
 
-response = requests.post("http://cthinkpad:8765/api/trade/execute", json=trade_request)
+response = requests.post("http://marypc:8765/api/trade/execute", json=trade_request)
 print(response.json())
 # {"status": "SUBMITTED", "order_id": "test_123", "message": "Trade command sent to Sierra Chart ACSIL"}
 ```
 
 ### **Check Trade Status**
 ```python
-status = requests.get("http://cthinkpad:8765/api/trade/status/test_123")
+status = requests.get("http://marypc:8765/api/trade/status/test_123")
 print(status.json())
 # {"command_id": "test_123", "status": "FILLED", "message": "Order completed"}
 ```

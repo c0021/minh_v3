@@ -1,46 +1,38 @@
 #!/usr/bin/env python3
 """
 MinhOS v3 Web Dashboard
-=======================
-FastAPI-based web interface for monitoring and controlling the trading system.
-
-Features:
-- Real-time status monitoring via WebSocket
-- Trading controls and configuration
-- Performance metrics and charts
-- System health monitoring
-- Historical data visualization
 """
 
 import asyncio
+import json
 import logging
 from datetime import datetime
+from typing import List, Dict, Any, Optional
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Dict, Any, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from minhos.dashboard.api import router as api_router
-from minhos.dashboard.api_enhanced import router as enhanced_api_router
-from minhos.dashboard.websocket_chat import websocket_router as chat_router
-from minhos.dashboard.api_trading import router as trading_router
-<<<<<<< HEAD
-from minhos.dashboard.api_ml_performance import router as ml_performance_router
-from minhos.dashboard.api_ml_pipeline import router as ml_pipeline_router
-from minhos.dashboard.api_kelly import router as kelly_router
-from minhos.dashboard.api_risk_validation_fastapi import router as risk_validation_router
-=======
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
 from minhos.services import (
     get_market_data_service, get_state_manager, 
     get_ai_brain_service, get_trading_engine
 )
 # Removed resilient market data imports - NO FAKE DATA PHILOSOPHY
+
+# Import API routers
+from .api import router as api_router
+from .api_enhanced import router as enhanced_api_router
+from .api_trading import router as trading_router
+from .api_ml_performance import router as ml_performance_router
+from .api_ml_pipeline import router as ml_pipeline_router
+from .api_kelly import router as kelly_router
+from .api_risk_validation_fastapi import router as risk_validation_router
+from .websocket_chat import websocket_router as chat_router
 
 logger = logging.getLogger(__name__)
 
@@ -73,16 +65,12 @@ templates = Jinja2Templates(directory=str(templates_dir))
 
 # Include API routes
 app.include_router(api_router, prefix="/api")
-<<<<<<< HEAD
 app.include_router(enhanced_api_router, prefix="/api")  # Enhanced API routes  
 app.include_router(trading_router)  # Trading API routes
 app.include_router(ml_performance_router)  # ML Performance API routes
 app.include_router(ml_pipeline_router)  # ML Pipeline API routes
 app.include_router(kelly_router)  # Kelly Criterion API routes
 app.include_router(risk_validation_router)  # Risk Validation API routes - Phase 3
-=======
-app.include_router(trading_router)  # Trading API routes
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
 
 # Include WebSocket chat routes
 app.include_router(chat_router)
@@ -153,7 +141,7 @@ class DashboardState:
         while self.running:
             try:
                 # Gather system state
-                update = self._gather_system_state()
+                update = await self._gather_system_state()
                 
                 # Broadcast to all clients
                 await manager.broadcast(update)
@@ -166,7 +154,7 @@ class DashboardState:
                 logger.error(f"Error in update loop: {e}")
                 await asyncio.sleep(5)  # Back off on error
     
-    def _gather_system_state(self) -> Dict[str, Any]:
+    async def _gather_system_state(self) -> Dict[str, Any]:
         """Gather current system state from all services"""
         state = {
             'timestamp': datetime.now().isoformat(),
@@ -250,7 +238,7 @@ class DashboardState:
             
             # Trading engine
             if hasattr(trading_engine, 'get_status'):
-                trading_status = trading_engine.get_status()
+                trading_status = await trading_engine.get_status()
                 state['trading'] = {
                     'active': trading_status.get('active', False),
                     'positions': len(trading_status.get('positions', [])),
@@ -332,7 +320,7 @@ async def websocket_endpoint(websocket: WebSocket):
     
     try:
         # Send initial state
-        initial_state = dashboard_state._gather_system_state()
+        initial_state = await dashboard_state._gather_system_state()
         await websocket.send_json({
             "type": "initial",
             "data": initial_state

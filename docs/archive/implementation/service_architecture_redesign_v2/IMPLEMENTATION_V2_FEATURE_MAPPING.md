@@ -139,7 +139,7 @@ Multi-symbol data streaming              → /services/market_data/streaming/str
 **Hardcoded Values Being Centralized:**
 ```
 CURRENT HARDCODED VALUE                  → NEW CONFIGURATION LOCATION
-host = "cthinkpad"                      → /configuration/master/production.yaml::network.sierra_bridge.host
+host = "marypc"                      → /configuration/master/production.yaml::network.sierra_bridge.host
 port = 8765                             → /configuration/master/production.yaml::network.sierra_bridge.port
 timeout = 5000                          → /configuration/master/production.yaml::network.sierra_bridge.timeout
 symbol = "NQU25"                        → Retrieved from /core/symbols/symbol_manager.py::get_current_symbol()
@@ -473,7 +473,7 @@ Lines 1664-1735: Trading Dashboard Functions → /dashboard/static/js/components
 **Network Configuration:**
 ```
 CURRENT HARDCODED                        → NEW CONFIGURATION LOCATION
-"cthinkpad" (Sierra bridge host)        → /configuration/master/production.yaml::network.sierra_bridge.host
+"marypc" (Sierra bridge host)        → /configuration/master/production.yaml::network.sierra_bridge.host
 8765 (Sierra bridge port)               → /configuration/master/production.yaml::network.sierra_bridge.port
 8080 (Web API port)                     → /configuration/master/production.yaml::network.web_api.port
 5000 (Dashboard port)                   → /configuration/master/production.yaml::network.dashboard.port

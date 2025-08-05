@@ -252,7 +252,7 @@ All SQLite databases located in `/data/` directory:
 - **Location**: `/windows/bridge_installation/`
 - **Purpose**: Real-time data and trade execution via Sierra Chart
 - **Protocol**: HTTP REST API with JSON communication
-- **Status**: Production stable at http://cthinkpad:8765
+- **Status**: Production stable at http://marypc:8765
 
 #### **Bridge Components**
 - **`bridge.py`** - Main bridge service
@@ -385,7 +385,7 @@ python3 test_production_validation.py
 - **Production Validation**: 80% success rate ✅
 - **Service Health**: All critical services operational ✅
 - **ML Pipeline**: LSTM + Ensemble + Kelly fully integrated ✅
-- **Bridge Connection**: Stable at http://cthinkpad:8765 ✅
+- **Bridge Connection**: Stable at http://marypc:8765 ✅
 - **Market Data**: Real-time NQU25-CME @ $23,447.75 ✅
 
 ### **Performance Targets**

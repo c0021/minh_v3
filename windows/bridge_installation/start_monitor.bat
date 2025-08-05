@@ -1,0 +1,6 @@
+@echo off
+echo Starting MinhOS Bridge Monitor...
+echo.
+echo Redirecting to scripts folder...
+cd scripts
+call start_monitor.bat

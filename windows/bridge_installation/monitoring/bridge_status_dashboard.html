@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MinhOS Bridge Status Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .status-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-healthy { background-color: #4CAF50; }
+        .status-warning { background-color: #FF9800; }
+        .status-error { background-color: #F44336; }
+        .status-unknown { background-color: #9E9E9E; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .refresh-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .alert {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #F44336;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4CAF50;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .auto-refresh {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .timestamp {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 MinhOS Bridge Status Dashboard</h1>
+            <p>Real-time monitoring of your Sierra Chart Bridge</p>
+        </div>
+        
+        <div class="auto-refresh">
+            <button class="refresh-btn" onclick="toggleAutoRefresh()">
+                <span id="autoRefreshText">Enable Auto-Refresh</span>
+            </button>
+            <button class="refresh-btn" onclick="refreshStatus()">🔄 Refresh Now</button>
+            <button class="refresh-btn" onclick="clearLogs()">🗑️ Clear Logs</button>
+        </div>
+        
+        <div class="grid">
+            <!-- Bridge Status Card -->
+            <div class="status-card">
+                <h3><span id="statusIndicator" class="status-indicator status-unknown"></span>Bridge Status</h3>
+                <div class="metric">
+                    <span>Health Status:</span>
+                    <span id="healthStatus">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span>Process ID:</span>
+                    <span id="processId">Unknown</span>
+                </div>
+                <div class="metric">
+                    <span>Version:</span>
+                    <span id="version">Unknown</span>
+                </div>
+                <div class="metric">
+                    <span>Last Check:</span>
+                    <span id="lastCheck" class="timestamp">Never</span>
+                </div>
+            </div>
+            
+            <!-- Connection Info Card -->
+            <div class="status-card">
+                <h3>📡 Connection Info</h3>
+                <div class="metric">
+                    <span>Health Endpoint:</span>
+                    <span id="healthEndpoint">http://localhost:8765/health</span>
+                </div>
+                <div class="metric">
+                    <span>Status Endpoint:</span>
+                    <span id="statusEndpoint">http://localhost:8765/status</span>
+                </div>
+                <div class="metric">
+                    <span>WebSocket:</span>
+                    <span id="websocketEndpoint">ws://localhost:8765/ws/live_data</span>
+                </div>
+                <div class="metric">
+                    <span>Response Time:</span>
+                    <span id="responseTime">Unknown</span>
+                </div>
+            </div>
+            
+            <!-- System Info Card -->
+            <div class="status-card">
+                <h3>💻 System Info</h3>
+                <div class="metric">
+                    <span>Uptime:</span>
+                    <span id="uptime">Unknown</span>
+                </div>
+                <div class="metric">
+                    <span>Symbols:</span>
+                    <span id="symbolCount">Unknown</span>
+                </div>
+                <div class="metric">
+                    <span>WebSocket Clients:</span>
+                    <span id="wsClients">Unknown</span>
+                </div>
+                <div class="metric">
+                    <span>Data Directory:</span>
+                    <span id="dataDirectory">Unknown</span>
+                </div>
+            </div>
+            
+            <!-- Monitoring Status Card -->
+            <div class="status-card">
+                <h3>🔍 Monitor Status</h3>
+                <div class="metric">
+                    <span>Monitor Running:</span>
+                    <span id="monitorStatus">Unknown</span>
+                </div>
+                <div class="metric">
+                    <span>Check Count:</span>
+                    <span id="checkCount">0</span>
+                </div>
+                <div class="metric">
+                    <span>Failures:</span>
+                    <span id="failureCount">0</span>
+                </div>
+                <div class="metric">
+                    <span>Last Alert:</span>
+                    <span id="lastAlert">None</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alerts Section -->
+        <div class="status-card">
+            <h3>🚨 Alerts & Notifications</h3>
+            <div id="alertsContainer">
+                <p>No alerts at this time.</p>
+            </div>
+        </div>
+        
+        <!-- Activity Log -->
+        <div class="status-card">
+            <h3>📋 Activity Log</h3>
+            <div class="log-container" id="activityLog">
+                <div class="timestamp">Dashboard initialized - Waiting for first status check...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let autoRefreshInterval = null;
+        let autoRefreshEnabled = false;
+        let checkCount = 0;
+        let failureCount = 0;
+        let startTime = new Date();
+        
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('activityLog');
+            const timestamp = new Date().toLocaleString();
+            const logClass = type === 'error' ? 'style="color: #F44336;"' : 
+                            type === 'success' ? 'style="color: #4CAF50;"' : 
+                            type === 'warning' ? 'style="color: #FF9800;"' : '';
+            
+            log.innerHTML += `<div class="timestamp" ${logClass}>[${timestamp}] ${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function addAlert(message, type = 'error') {
+            const container = document.getElementById('alertsContainer');
+            const timestamp = new Date().toLocaleString();
+            const alertClass = type === 'success' ? 'success' : 'alert';
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.className = alertClass;
+            alertDiv.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            
+            container.appendChild(alertDiv);
+            
+            // Update last alert time
+            document.getElementById('lastAlert').textContent = timestamp;
+        }
+        
+        async function checkBridgeHealth() {
+            checkCount++;
+            document.getElementById('checkCount').textContent = checkCount;
+            
+            const startTime = performance.now();
+            
+            try {
+                addLog('Checking bridge health...', 'info');
+                
+                const response = await fetch('http://localhost:8765/health');
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Update status indicators
+                    document.getElementById('statusIndicator').className = 'status-indicator status-healthy';
+                    document.getElementById('healthStatus').textContent = 'Healthy ✅';
+                    document.getElementById('version').textContent = data.version || 'Unknown';
+                    document.getElementById('responseTime').textContent = `${responseTime}ms`;
+                    document.getElementById('lastCheck').textContent = new Date().toLocaleString();
+                    
+                    addLog(`Bridge healthy - Response time: ${responseTime}ms`, 'success');
+                    
+                    // Get detailed status
+                    await getDetailedStatus();
+                    
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+            } catch (error) {
+                failureCount++;
+                document.getElementById('failureCount').textContent = failureCount;
+                
+                // Update status indicators
+                document.getElementById('statusIndicator').className = 'status-indicator status-error';
+                document.getElementById('healthStatus').textContent = 'Offline ❌';
+                document.getElementById('responseTime').textContent = 'No response';
+                document.getElementById('lastCheck').textContent = new Date().toLocaleString();
+                
+                addLog(`Bridge health check failed: ${error.message}`, 'error');
+                addAlert(`Bridge appears to be down! Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getDetailedStatus() {
+            try {
+                const response = await fetch('http://localhost:8765/api/bridge/stats');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Update detailed info from bridge stats
+                    const wsData = data.websocket_connections || {};
+                    document.getElementById('symbolCount').textContent = wsData.symbols?.length || 'Unknown';
+                    document.getElementById('wsClients').textContent = wsData.total_connections || 'Unknown';
+                    
+                    // Calculate uptime
+                    const uptime = Math.round((new Date() - startTime) / 1000 / 60);
+                    document.getElementById('uptime').textContent = `${uptime} minutes`;
+                    
+                    // Update additional stats if available
+                    if (data.file_cache) {
+                        addLog(`Cache stats: ${data.file_cache.hits} hits, ${data.file_cache.misses} misses`, 'info');
+                    }
+                }
+            } catch (error) {
+                addLog(`Could not get detailed status: ${error.message}`, 'warning');
+            }
+        }
+        
+        function refreshStatus() {
+            addLog('Manual refresh requested', 'info');
+            checkBridgeHealth();
+        }
+        
+        function toggleAutoRefresh() {
+            if (autoRefreshEnabled) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshEnabled = false;
+                document.getElementById('autoRefreshText').textContent = 'Enable Auto-Refresh';
+                addLog('Auto-refresh disabled', 'warning');
+            } else {
+                autoRefreshInterval = setInterval(checkBridgeHealth, 10000); // Every 10 seconds
+                autoRefreshEnabled = true;
+                document.getElementById('autoRefreshText').textContent = 'Disable Auto-Refresh';
+                addLog('Auto-refresh enabled (10 second interval)', 'success');
+                checkBridgeHealth(); // Immediate check
+            }
+        }
+        
+        function clearLogs() {
+            document.getElementById('activityLog').innerHTML = '<div class="timestamp">Activity log cleared</div>';
+            document.getElementById('alertsContainer').innerHTML = '<p>No alerts at this time.</p>';
+            document.getElementById('lastAlert').textContent = 'None';
+            addLog('Logs cleared', 'info');
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('Dashboard loaded - Click "Enable Auto-Refresh" to start monitoring', 'info');
+            
+            // Set monitor status
+            document.getElementById('monitorStatus').textContent = 'Dashboard Active ✅';
+            
+            // Initial health check
+            checkBridgeHealth();
+        });
+        
+        // Check for monitoring logs periodically
+        setInterval(function() {
+            // This would check for new monitoring log files if we had file access
+            // For now, we'll just update the monitor status
+            document.getElementById('monitorStatus').textContent = 'Dashboard Active ✅';
+        }, 30000);
+    </script>
+</body>
+</html>

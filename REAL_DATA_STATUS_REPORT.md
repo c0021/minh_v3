@@ -28,7 +28,7 @@
 ### **✅ Bridge Health:**
 - **Status**: Healthy and connected
 - **Service**: minhos_sierra_bridge v3.1.0
-- **URL**: http://cthinkpad:8765
+- **URL**: http://marypc:8765
 - **Real-time capability**: ✅ Active
 
 ### **❌ Historical Data APIs:**

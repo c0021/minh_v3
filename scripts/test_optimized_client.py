@@ -123,7 +123,7 @@ async def test_direct_connection():
             start = time.time()
             try:
                 async with session.get(
-                    'http://cthinkpad:8765/api/market_data',
+                    'http://marypc:8765/api/market_data',
                     timeout=aiohttp.ClientTimeout(total=5)
                 ) as resp:
                     if resp.status == 200:
@@ -170,7 +170,7 @@ async def main():
 if __name__ == "__main__":
     print("MinhOS v3 Optimized Sierra Client Test")
     print("======================================")
-    print("Make sure the Windows Bridge API is running at http://cthinkpad:8765")
+    print("Make sure the Windows Bridge API is running at http://marypc:8765")
     print()
     
     asyncio.run(main())

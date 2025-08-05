@@ -16,7 +16,7 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BRIDGE_URL = "http://cthinkpad:8765"
+BRIDGE_URL = "http://marypc:8765"
 
 async def test_bridge_integration():
     """Test complete bridge integration"""
@@ -102,7 +102,7 @@ async def test_bridge_integration():
         print("\n5. Testing WebSocket Connection...")
         try:
             import websockets
-            uri = f"ws://cthinkpad:8765/ws/market_data"
+            uri = f"ws://marypc:8765/ws/market_data"
             
             async with websockets.connect(uri) as websocket:
                 print("   ✅ WebSocket Connected")

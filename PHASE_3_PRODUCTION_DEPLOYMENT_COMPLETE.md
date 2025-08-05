@@ -117,7 +117,7 @@ Sierra Chart → LSTM+Ensemble → Analysis → Trade Signal → Kelly Criterion
 - [x] Trading Engine ML-ready
 - [x] Centralized symbol management active
 - [x] Kelly Criterion 100% test success
-- [x] Bridge connection stable (http://cthinkpad:8765)
+- [x] Bridge connection stable (http://marypc:8765)
 - [x] Market data flowing (NQU25-CME @ $23,447.75)
 
 #### **Technical Readiness**

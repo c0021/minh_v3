@@ -59,11 +59,16 @@ class SierraHistoricalDataService:
         self.market_adapter = get_market_data_adapter()
         
         # Sierra Chart configuration  
-        self.sierra_host = "cthinkpad"  # Current bridge host
+        # Import bridge configuration from main config file
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+        from config import BRIDGE_URL
+        
         self.sierra_data_path = "C:/SierraChart/Data"  # Remote path
         
         # File access via bridge API
-        self.bridge_url = f"http://{self.sierra_host}:8765"
+        self.bridge_url = BRIDGE_URL
         
         # Supported symbols (centralized symbol management)
         from ..core.symbol_integration import get_historical_data_symbols, get_symbol_integration

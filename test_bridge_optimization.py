@@ -13,19 +13,26 @@ Usage:
     python3 test_bridge_optimization.py
 """
 
+import sys
 import asyncio
 import json
 import time
 import aiohttp
 import websockets
 from datetime import datetime
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from config import BRIDGE_URL, BRIDGE_HOSTNAME, BRIDGE_PORT
 
 async def test_bridge_optimization():
     """Test all Phase 2 optimizations"""
     print("🚀 Testing Bridge Phase 2 Optimizations")
     print("=" * 50)
     
-    bridge_url = "http://cthinkpad:8765"
+    bridge_url = BRIDGE_URL
     
     # Test 1: Check bridge health and optimization status
     print("\n1. Testing Bridge Health & Optimization Status")
@@ -65,7 +72,7 @@ async def test_bridge_optimization():
     # Test 3: WebSocket optimization test
     print("\n3. Testing Optimized WebSocket Connection")
     test_symbol = "NQU25-CME"  # Use a common symbol
-    ws_url = f"ws://cthinkpad:8765/ws/live_data/{test_symbol}"
+    ws_url = f"ws://{BRIDGE_HOSTNAME}:{BRIDGE_PORT}/ws/live_data/{test_symbol}"
     
     try:
         async with websockets.connect(ws_url, ping_interval=20) as websocket:

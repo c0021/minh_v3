@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from config import BRIDGE_URL
 from minhos.core.market_data_adapter import get_market_data_adapter
 
 async def test_current_data_status():
@@ -58,7 +59,7 @@ async def test_bridge_historical_endpoints():
     print("\n🌉 Testing Bridge Historical Data Endpoints")
     print("=" * 50)
     
-    bridge_url = "http://cthinkpad:8765"
+    bridge_url = BRIDGE_URL
     
     # Test various potential endpoints
     endpoints_to_test = [
@@ -101,7 +102,7 @@ async def test_real_dtc_request():
     print("\n📡 Testing Real DTC Historical Data Request")
     print("=" * 45)
     
-    bridge_url = "http://cthinkpad:8765"
+    bridge_url = BRIDGE_URL
     
     # Try to request actual historical data for NQ
     symbol = "NQU25-CME"

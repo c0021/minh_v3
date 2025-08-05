@@ -69,7 +69,7 @@ Phase 1 - Week 1 Tasks:
 | XAUUSD | ✅ Working | 39 records | Returns CSV data |
 
 ### **Bridge API Status**
-- **URL**: `http://cthinkpad:8765` 
+- **URL**: `http://marypc:8765` 
 - **Health**: ✅ Healthy (version 3.1.0)
 - **File Access**: ✅ Working for existing files
 - **Error Handling**: ✅ Proper 404 responses for missing files
@@ -169,7 +169,7 @@ implementation/sierra_chart_data_enhancement/
 - **Services**: All operational, no errors after NULL handling fixes
 
 ### **Bridge Connection**
-- **Windows System**: cthinkpad:8765
+- **Windows System**: marypc:8765
 - **Protocol**: HTTP + WebSocket
 - **Data Flow**: Active real-time streaming
 - **File Access**: Secure API with path validation

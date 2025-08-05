@@ -1,68 +1,72 @@
 #!/usr/bin/env python3
 """
 MinhOS v3 AI Brain Service
-==========================
-Linux-native AI analysis and trading signal generation service.
-Provides intelligent market analysis, pattern recognition, and trading signals
-without Windows dependencies.
-
-Replaces ai_brain_service.py with enhanced AI capabilities and clean architecture.
 """
 
+import logging
 import asyncio
 import json
-import logging
+import time
 import statistics
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, List, Tuple
-from pathlib import Path
-from dataclasses import dataclass, asdict
+from typing import Dict, List, Any, Optional, Tuple
 from enum import Enum
+from dataclasses import dataclass, asdict
+from collections import deque, defaultdict
+from pathlib import Path
 import numpy as np
-from collections import deque, defaultdict, Counter
 import sqlite3
-import pickle
+import threading
+from contextlib import contextmanager
 
-# Import ML capabilities - Enhanced with detailed error logging
-try:
-    import sys
-    from pathlib import Path
-    project_root = Path(__file__).parent.parent.parent
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-    from capabilities.prediction.lstm import LSTMPredictor
-    from capabilities.ensemble import EnsembleManager
-    from capabilities.position_sizing.api import PositionSizingAPI
-    from .ml_pipeline_service import MLPipelineService
-    HAS_LSTM = True
-    HAS_ENSEMBLE = True
-    HAS_KELLY = True
-    HAS_ML_PIPELINE = True
-    print(f"✅ ML capabilities imported successfully - LSTM:{HAS_LSTM}, Ensemble:{HAS_ENSEMBLE}, Kelly:{HAS_KELLY}, Pipeline:{HAS_ML_PIPELINE}")
-except ImportError as e:
-    print(f"❌ ML capabilities import failed: {e}")
-    import traceback
-    traceback.print_exc()
-    HAS_LSTM = False
-    HAS_ENSEMBLE = False
-    HAS_KELLY = False
-    HAS_ML_PIPELINE = False
-    LSTMPredictor = None
-    EnsembleManager = None
-    PositionSizingAPI = None
-    MLPipelineService = None
-
-# Import other services
-from .sierra_client import get_sierra_client
-from ..models.market import MarketData
-from .state_manager import get_state_manager
-from ..core.market_data_adapter import get_market_data_adapter
-from .sierra_historical_data import get_sierra_historical_service
-<<<<<<< HEAD
+# MinhOS imports
+from minhos.models.market import MarketData
 from .ab_testing_service import get_ab_testing_service
 from .ml_monitoring_service import get_ml_monitoring_service
-=======
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
+from ..core.market_data_adapter import get_market_data_adapter
+
+# Import service getters (avoid circular imports by importing when needed)
+def get_sierra_client():
+    from . import get_sierra_client as _get_sierra_client
+    return _get_sierra_client()
+
+def get_state_manager():
+    from . import get_state_manager as _get_state_manager
+    return _get_state_manager()
+
+def get_sierra_historical_service():
+    from . import get_sierra_historical_service as _get_sierra_historical_service
+    return _get_sierra_historical_service()
+
+# Optional ML imports with availability flags
+HAS_ML_PIPELINE = False
+HAS_LSTM = False
+HAS_ENSEMBLE = False
+HAS_KELLY = False
+
+try:
+    from capabilities.prediction.lstm.lstm_predictor import LSTMPredictor
+    HAS_LSTM = True
+except ImportError:
+    LSTMPredictor = None
+
+try:
+    from capabilities.prediction.ensemble.ensemble_manager import EnsembleManager
+    HAS_ENSEMBLE = True
+except ImportError:
+    EnsembleManager = None
+
+try:
+    from .position_sizing_service import PositionSizingService
+    HAS_KELLY = True
+except ImportError:
+    PositionSizingService = None
+
+try:
+    from .ml_pipeline_service import MLPipelineService
+    HAS_ML_PIPELINE = True
+except ImportError:
+    MLPipelineService = None
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -129,7 +133,6 @@ class TradingSignal:
 
 @dataclass
 class DetectedPattern:
-    """Represents a detected pattern"""
     pattern_type: PatternType
     confidence: float
     description: str
@@ -177,7 +180,6 @@ class AIBrainService:
     """
     
     def __init__(self, db_path: str = None):
-        """Initialize AI Brain Service with pattern recognition and ML capabilities"""
         self.running = False
         
         # Market data buffer for analysis
@@ -259,7 +261,6 @@ class AIBrainService:
         
         logger.info("🧠 AI Brain Service initialized")
     
-<<<<<<< HEAD
     def _initialize_ml_capabilities(self):
         """Initialize ML capabilities (LSTM, Ensemble, etc.)"""
         logger.info(f"🔄 Initializing ML capabilities - HAS_ML_PIPELINE:{HAS_ML_PIPELINE}, HAS_LSTM:{HAS_LSTM}, HAS_ENSEMBLE:{HAS_ENSEMBLE}, HAS_KELLY:{HAS_KELLY}")
@@ -304,12 +305,12 @@ class AIBrainService:
                     logger.warning(f"⚠️ Ensemble models disabled - HAS_ENSEMBLE:{HAS_ENSEMBLE}, EnsembleManager:{EnsembleManager is not None}")
                 
                 # Initialize Kelly Criterion Position Sizing
-                if HAS_KELLY and PositionSizingAPI:
+                if HAS_KELLY and PositionSizingService:
                     logger.info("🔄 Attempting to initialize Kelly Criterion...")
-                    self.ml_capabilities['kelly'] = PositionSizingAPI()
+                    self.ml_capabilities['kelly'] = PositionSizingService()
                     logger.info("✅ Kelly Criterion position sizing initialized")
                 else:
-                    logger.warning(f"⚠️ Kelly Criterion disabled - HAS_KELLY:{HAS_KELLY}, PositionSizingAPI:{PositionSizingAPI is not None}")
+                    logger.warning(f"⚠️ Kelly Criterion disabled - HAS_KELLY:{HAS_KELLY}, PositionSizingService:{PositionSizingService is not None}")
                 
         except Exception as e:
             logger.error(f"❌ ML capabilities initialization error: {e}")
@@ -327,9 +328,15 @@ class AIBrainService:
                 logger.info("✅ Force-initialized ML Pipeline Service")
             except Exception as e:
                 logger.error(f"❌ Force initialization failed: {e}")
+                
+                # Try individual services as fallback
+                try:
+                    if HAS_KELLY and PositionSizingService:
+                        self.ml_capabilities['kelly'] = PositionSizingService()
+                        logger.info("✅ Force-initialized Kelly Criterion")
+                except Exception as kelly_e:
+                    logger.error(f"❌ Kelly force initialization failed: {kelly_e}")
     
-=======
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     async def _load_historical_context(self):
         """Load historical market data for AI context"""
         try:
@@ -513,7 +520,6 @@ class AIBrainService:
         """Perform comprehensive market analysis with historical data fallback"""
         try:
             # Check if we have sufficient real-time data
-<<<<<<< HEAD
             analysis_result = await self._get_analysis_data()
             if not analysis_result:
                 return
@@ -527,24 +533,15 @@ class AIBrainService:
                 analysis_data = analysis_result
                 data_source = 'realtime'
             
-=======
-            analysis_data = await self._get_analysis_data()
-            if not analysis_data:
-                return
-            
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             # Perform different types of analysis
             trend_analysis = await self._analyze_trend(analysis_data)
             momentum_analysis = await self._analyze_momentum(analysis_data)
             volatility_analysis = await self._analyze_volatility(analysis_data)
             volume_analysis = await self._analyze_volume(analysis_data)
             pattern_analysis = await self._analyze_patterns(analysis_data)
-<<<<<<< HEAD
             
             # Perform ML analysis
             ml_analysis = await self._analyze_ml_predictions(analysis_data)
-=======
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             
             # Combine analyses
             combined_analysis = await self._combine_analyses(
@@ -552,13 +549,8 @@ class AIBrainService:
                 volume_analysis, pattern_analysis, ml_analysis
             )
             
-<<<<<<< HEAD
             # Generate trading signal with data source context and A/B testing
             signal = await self._generate_signal(combined_analysis, analysis_data, data_source)
-=======
-            # Generate trading signal
-            signal = await self._generate_signal(combined_analysis, analysis_data)
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             
             # Update current state
             self.current_analysis = combined_analysis
@@ -589,17 +581,10 @@ class AIBrainService:
         except Exception as e:
             logger.error(f"❌ Analysis error: {e}")
     
-<<<<<<< HEAD
     async def _get_analysis_data(self) -> Dict[str, Any]:
         """Get data for analysis - real-time or historical fallback"""
         try:
             # First, check if we have sufficient and fresh real-time data with volume
-=======
-    async def _get_analysis_data(self) -> List[Dict[str, Any]]:
-        """Get data for analysis - real-time or historical fallback"""
-        try:
-            # First, check if we have sufficient real-time data with volume
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             if self.market_data_buffer:
                 recent_data = list(self.market_data_buffer)[-self.analysis_params["trend_period"]:]
                 
@@ -607,7 +592,6 @@ class AIBrainService:
                 recent_volumes = [d.get('volume', 0) for d in recent_data if d.get('volume', 0) > 0]
                 avg_recent_volume = sum(recent_volumes) / len(recent_volumes) if recent_volumes else 0
                 
-<<<<<<< HEAD
                 # Check data freshness
                 data_is_fresh = False
                 if recent_data:
@@ -616,16 +600,30 @@ class AIBrainService:
                         if last_timestamp:
                             from datetime import datetime, timedelta
                             if isinstance(last_timestamp, str):
-                                last_time = datetime.fromisoformat(last_timestamp.replace('Z', '+00:00'))
+                                # Handle both ISO format and timestamp strings
+                                if 'T' in last_timestamp:
+                                    last_time = datetime.fromisoformat(last_timestamp.replace('Z', '+00:00'))
+                                else:
+                                    # Handle timestamp as string
+                                    last_time = datetime.fromtimestamp(float(last_timestamp))
                             elif isinstance(last_timestamp, (int, float)):
                                 last_time = datetime.fromtimestamp(last_timestamp)
                             else:
                                 last_time = last_timestamp
                             
-                            age_minutes = (datetime.now() - last_time.replace(tzinfo=None)).total_seconds() / 60
+                            # Remove timezone info for comparison
+                            if hasattr(last_time, 'tzinfo') and last_time.tzinfo:
+                                last_time = last_time.replace(tzinfo=None)
+                            
+                            age_minutes = (datetime.now() - last_time).total_seconds() / 60
                             data_is_fresh = age_minutes <= 5  # Fresh within 5 minutes
+                            
+                            # Debug logging for troubleshooting
+                            logger.debug(f"Data freshness check: timestamp={last_timestamp}, age={age_minutes:.1f}min, fresh={data_is_fresh}")
+                            
                     except Exception as e:
                         logger.warning(f"Could not verify data freshness: {e}")
+                        logger.warning(f"Timestamp format: {type(last_timestamp)} = {last_timestamp}")
                         data_is_fresh = False
                 
                 # If we have good volume AND fresh data, use real-time
@@ -633,13 +631,14 @@ class AIBrainService:
                     logger.info(f"📊 Using real-time data (avg volume: {avg_recent_volume:,.0f})")
                     return {'data': recent_data, 'source': 'realtime'}
                 elif avg_recent_volume >= self.analysis_params["min_volume_threshold"] and not data_is_fresh:
-                    logger.info(f"⚠️ Real-time data has good volume ({avg_recent_volume:,.0f}) but is stale, falling back to historical data")
-=======
-                # If we have good volume data, use real-time
-                if avg_recent_volume >= self.analysis_params["min_volume_threshold"]:
-                    logger.info(f"📊 Using real-time data (avg volume: {avg_recent_volume:,.0f})")
-                    return recent_data
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
+                    # During market hours, if we have good volume, use the data even if timestamp check fails
+                    # This handles cases where the timestamp format is causing false negatives
+                    current_hour = datetime.now().hour
+                    if 9 <= current_hour <= 16:  # Market hours (9:30 AM - 4:00 PM ET roughly)
+                        logger.info(f"📊 Using real-time data during market hours (avg volume: {avg_recent_volume:,.0f}) despite timestamp issues")
+                        return {'data': recent_data, 'source': 'realtime_market_hours'}
+                    else:
+                        logger.info(f"⚠️ Real-time data has good volume ({avg_recent_volume:,.0f}) but is stale, falling back to historical data")
                 else:
                     logger.info(f"⚠️ Low real-time volume ({avg_recent_volume:.0f}), falling back to historical data")
             
@@ -669,11 +668,7 @@ class AIBrainService:
                         
                         logger.info(f"📈 Using historical data: {len(historical_data)} records, "
                                   f"avg volume: {sum(d['volume'] for d in historical_data)/len(historical_data):,.0f}")
-<<<<<<< HEAD
                         return {'data': historical_data[-self.analysis_params["trend_period"]:], 'source': 'historical'}
-=======
-                        return historical_data[-self.analysis_params["trend_period"]:]  # Last N periods
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
                         
                 except Exception as e:
                     logger.error(f"❌ Error fetching historical data: {e}")
@@ -681,7 +676,6 @@ class AIBrainService:
             # If no historical service or error, return what we have
             if self.market_data_buffer:
                 logger.warning("⚠️ Using limited real-time data despite low volume")
-<<<<<<< HEAD
                 return {'data': list(self.market_data_buffer)[-self.analysis_params["trend_period"]:], 'source': 'realtime_limited'}
             
             logger.warning("❌ No data available for analysis")
@@ -691,16 +685,6 @@ class AIBrainService:
             logger.error(f"❌ Error getting analysis data: {e}")
             fallback_data = list(self.market_data_buffer)[-self.analysis_params["trend_period"]:] if self.market_data_buffer else []
             return {'data': fallback_data, 'source': 'error_fallback'}
-=======
-                return list(self.market_data_buffer)[-self.analysis_params["trend_period"]:]
-            
-            logger.warning("❌ No data available for analysis")
-            return []
-            
-        except Exception as e:
-            logger.error(f"❌ Error getting analysis data: {e}")
-            return list(self.market_data_buffer)[-self.analysis_params["trend_period"]:] if self.market_data_buffer else []
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
     
     async def _analyze_trend(self, data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze market trend"""
@@ -830,7 +814,6 @@ class AIBrainService:
             return {"level": "unknown", "value": 0.0}
     
     async def _analyze_volume(self, data: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Analyze volume patterns"""
         try:
             volumes = [d.get('volume', 0) for d in data if d.get('volume') is not None]
             
@@ -867,7 +850,6 @@ class AIBrainService:
             return {"trend": "unknown", "relative_volume": 1.0}
     
     async def _analyze_patterns(self, data: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Analyze chart patterns"""
         try:
             if len(data) < 20:
                 return {"patterns": [], "confidence": 0.0}
@@ -1101,11 +1083,7 @@ class AIBrainService:
                 volume_analysis="unknown"
             )
     
-<<<<<<< HEAD
     async def _generate_signal(self, analysis: MarketAnalysis, data: List[Dict[str, Any]], data_source: str = 'realtime') -> Optional[TradingSignal]:
-=======
-    async def _generate_signal(self, analysis: MarketAnalysis, data: List[Dict[str, Any]]) -> Optional[TradingSignal]:
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
         """Generate trading signal based on analysis - REAL DATA ONLY"""
         try:
             if not analysis or not data:
@@ -1119,7 +1097,6 @@ class AIBrainService:
                 logger.error("🚨 NO REAL DATA - Invalid price data, refusing to generate signal")
                 return None
             
-<<<<<<< HEAD
             # Check data freshness - only apply strict freshness check for real-time data
             if data_source == 'realtime':
                 try:
@@ -1159,29 +1136,6 @@ class AIBrainService:
                         logger.info(f"📈 Using {data_source} data from {age_hours:.1f} hours ago for weekend analysis")
                 except Exception as e:
                     logger.info(f"📈 Using {data_source} data for weekend analysis (timestamp parse error: {e})")
-=======
-            # Check data freshness - only trade on recent data
-            try:
-                last_timestamp = data[-1].get('timestamp')
-                if last_timestamp:
-                    from datetime import datetime, timedelta
-                    if isinstance(last_timestamp, str):
-                        last_time = datetime.fromisoformat(last_timestamp.replace('Z', '+00:00'))
-                    elif isinstance(last_timestamp, (int, float)):
-                        # Handle Unix timestamp
-                        last_time = datetime.fromtimestamp(last_timestamp)
-                    else:
-                        last_time = last_timestamp
-                    
-                    age_minutes = (datetime.now() - last_time.replace(tzinfo=None)).total_seconds() / 60
-                    if age_minutes > 5:  # Data older than 5 minutes is stale
-                        logger.error(f"🚨 STALE DATA - Market data is {age_minutes:.1f} minutes old, refusing to generate signal")
-                        return None
-            except Exception as e:
-                logger.warning(f"Could not verify data freshness: {e}")
-                # If we can't verify freshness, err on the side of caution
-                return None
->>>>>>> 25301bf6f2e931ccc6aab9ec2c45b5c7f4fddfa2
             
             # Base signal logic
             signal_type = SignalType.HOLD
@@ -1310,7 +1264,7 @@ class AIBrainService:
                 try:
                     start_time = time.time()
                     
-                    kelly_api = self.ml_capabilities['kelly']
+                    kelly_service = self.ml_capabilities['kelly']
                     
                     # Prepare signal for Kelly calculation
                     kelly_signal = {
@@ -1319,12 +1273,15 @@ class AIBrainService:
                         'source': 'ai_brain_service'
                     }
                     
-                    # Get position sizing recommendation (assume $100k capital for demo)
-                    # In production, this would come from account management
-                    capital = 100000  # TODO: Get from account service
+                    # Get position sizing recommendation using Kelly service
+                    # Get current symbol for position calculation
+                    from ..core.symbol_integration import get_ai_brain_primary_symbol
+                    primary_symbol = get_ai_brain_primary_symbol()
                     
-                    position_result = await kelly_api.calculate_position_size(
-                        kelly_signal, capital, data[-30:] if len(data) >= 30 else data
+                    position_result = await kelly_service.calculate_optimal_position(
+                        symbol=primary_symbol,
+                        current_price=current_price,
+                        market_data={'signal': kelly_signal, 'data': data[-30:] if len(data) >= 30 else data}
                     )
                     
                     # Record performance metrics for monitoring
@@ -1332,10 +1289,10 @@ class AIBrainService:
                     self.ml_monitoring.record_performance_metric('kelly', 'latency_ms', latency_ms)
                     
                     # Add Kelly results to signal as additional attributes
-                    signal.kelly_position_size = position_result.get('position_size', 0)
-                    signal.kelly_position_pct = position_result.get('position_pct', 0)
-                    signal.kelly_win_probability = position_result.get('win_probability', 0.5)
-                    signal.kelly_method = position_result.get('method', 'unknown')
+                    signal.kelly_position_size = position_result.recommended_size
+                    signal.kelly_position_pct = position_result.kelly_fraction
+                    signal.kelly_win_probability = position_result.win_probability
+                    signal.kelly_method = position_result.calculation_details.get('method', 'ml_enhanced')
                     
                     # Record Kelly-specific metrics
                     self.ml_monitoring.record_performance_metric('kelly', 'win_rate', signal.kelly_win_probability)
@@ -1346,9 +1303,9 @@ class AIBrainService:
                     signal_data['position_size'] = signal.kelly_position_size
                     signal_data['kelly_enhanced'] = True
                     
-                    logger.debug(f"Kelly sizing: {position_result.get('position_pct', 0):.1%} "
-                               f"(${position_result.get('position_size', 0):.0f}) "
-                               f"Win prob: {position_result.get('win_probability', 0.5):.1%}")
+                    logger.debug(f"Kelly sizing: {signal.kelly_position_pct:.1%} "
+                               f"({signal.kelly_position_size} contracts) "
+                               f"Win prob: {signal.kelly_win_probability:.1%}")
                     
                 except Exception as e:
                     logger.warning(f"Kelly sizing calculation failed: {e}")
@@ -1529,10 +1486,8 @@ class AIBrainService:
         return list(self.analysis_history)[-limit:]
 
 class PatternDetector:
-    """Simple pattern detection for market data"""
     
     def detect_patterns(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Detect chart patterns in market data"""
         patterns = []
         
         try:

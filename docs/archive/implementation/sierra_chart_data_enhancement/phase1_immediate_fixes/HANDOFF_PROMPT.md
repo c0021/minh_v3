@@ -16,7 +16,7 @@ We're implementing a systematic 28-week plan to transform MinhOS from 30% to 95%
 - **Root Cause**: Files don't exist on Sierra Chart Windows system
 - **Evidence**: Direct API testing confirmed file not found
 - **Working Files**: `NQU25-CME.dly`, `EURUSD.dly`, `XAUUSD.dly` all accessible
-- **Location**: Bridge at `http://cthinkpad:8765`
+- **Location**: Bridge at `http://marypc:8765`
 
 ## 🚀 **Your Mission: Task 1.1.2**
 
@@ -29,18 +29,18 @@ We're implementing a systematic 28-week plan to transform MinhOS from 30% to 95%
 # Test these API calls to understand what's available:
 
 # Try listing ES futures with different month codes
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/ESZ25-CME.dly"
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/ESH26-CME.dly" 
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/ESM26-CME.dly"
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/ESZ25-CME.dly"
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/ESH26-CME.dly" 
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/ESM26-CME.dly"
 
 # Try YM futures with different month codes  
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/YMZ25-CME.dly"
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/YMH26-CME.dly"
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/YMZ25-CME.dly"
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/YMH26-CME.dly"
 
 # Check what NQ contracts are available
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/NQU25-CME.dly" # We know this works
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/NQZ25-CME.dly"
-curl "http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/NQH26-CME.dly"
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/NQU25-CME.dly" # We know this works
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/NQZ25-CME.dly"
+curl "http://marypc:8765/api/file/read?path=C:/SierraChart/Data/NQH26-CME.dly"
 ```
 
 #### **2. Research Futures Contract Codes**
@@ -79,9 +79,9 @@ Create a file: `task_1_1_2_results.md` with:
 ## 🔍 **Key Information**
 
 ### **Bridge Connection**
-- **URL**: `http://cthinkpad:8765`
-- **Health Check**: `curl http://cthinkpad:8765/health`
-- **File API**: `http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/{filename}`
+- **URL**: `http://marypc:8765`
+- **Health Check**: `curl http://marypc:8765/health`
+- **File API**: `http://marypc:8765/api/file/read?path=C:/SierraChart/Data/{filename}`
 
 ### **Current Working Symbols**
 - `NQU25-CME` - 43 records (NASDAQ futures)
@@ -123,8 +123,8 @@ Once you complete this:
 
 ## 🚨 **If You Get Stuck**
 
-- Bridge health check: `curl http://cthinkpad:8765/health`
-- Working file test: `curl http://cthinkpad:8765/api/file/read?path=C:/SierraChart/Data/NQU25-CME.dly`
+- Bridge health check: `curl http://marypc:8765/health`
+- Working file test: `curl http://marypc:8765/api/file/read?path=C:/SierraChart/Data/NQU25-CME.dly`
 - Check the bridge logs at `/home/colindo/Sync/minh_v3/windows/bridge_installation/bridge.log`
 
 ---

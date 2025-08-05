@@ -46,7 +46,7 @@ The system will automatically:
 MinhOS checks for bridge host in this order:
 1. Environment variable (`BRIDGE_HOSTNAME`)
 2. `.env` file in MinhOS directory
-3. Default fallback (`cthinkpad`)
+3. Default fallback (`marypc`)
 
 ## Troubleshooting:
 

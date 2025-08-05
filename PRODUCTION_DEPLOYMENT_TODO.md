@@ -21,7 +21,7 @@
   - **Status**: All ML dependencies installed successfully (PyTorch 2.7.1+cpu, XGBoost 3.0.2, Scikit-learn 1.7.1, LightGBM 4.6.0)
 
 - [x] **Validate Live Sierra Chart Connection** ✅ COMPLETED 
-  - [x] Confirm bridge receiving data (Bridge healthy at http://cthinkpad:8765)
+  - [x] Confirm bridge receiving data (Bridge healthy at http://marypc:8765)
   - [x] Test data flow: Bridge → AI Brain → Kelly Sizing → Dashboard
   - [ ] **⚠️ ISSUE FOUND**: Symbol still showing NQU25 instead of NQZ25 (December contract)
   - [ ] **Focus on 3 core symbols**: NQ (Nasdaq futures), ES (S&P futures), VIX (volatility index)

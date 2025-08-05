@@ -70,7 +70,7 @@ def measure_latency(url: str, num_requests: int = 10) -> Tuple[List[float], floa
     return [], 999, 0
 
 
-def diagnose_connection(url: str = "http://cthinkpad:8765/api/market_data"):
+def diagnose_connection(url: str = "http://marypc:8765/api/market_data"):
     """Comprehensive connection diagnostics"""
     print(f"Diagnosing connection to: {url}")
     print("=" * 60)
@@ -246,8 +246,8 @@ def main():
     parser = argparse.ArgumentParser(description='Diagnose Sierra Chart streaming connection')
     parser.add_argument(
         '--url', 
-        default='http://cthinkpad:8765/api/market_data',
-        help='Sierra Bridge API URL (default: http://cthinkpad:8765/api/market_data)'
+        default='http://marypc:8765/api/market_data',
+        help='Sierra Bridge API URL (default: http://marypc:8765/api/market_data)'
     )
     
     args = parser.parse_args()
